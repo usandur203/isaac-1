@@ -10,40 +10,31 @@ def householder(x):
     return r, sigma
     
 def bidiagonalize(A):
-    #~ k = 1
-    #~ i = 0
-    #~ M, N = A.shape
-    #~ 
-    #~ V = np.zeros(M, M)
-    #~ U = np.zeros(M, N)
+    M, N = A.shape
+    
+    V = np.zeros((M, M))
+    U = np.zeros((M, N))
+    
+    K = 1
+    i = 0
+    
+    Y = np.zeros((M, K))
+    X = np.zeros((N, K))
     
     #Householder of column
-    v, tv = householder(A[0:,0])
-    y = tv*dot(A.T, v)
+    V[i:,i], tv = householder(A[0:,0])
+    Y[i:,i] = tv*dot(A.T, V[i:,i])
 
     #Householder of rows
-    u, tu = householder(A[0,1:] - v[0]*y[1:])
-    x = tu*dot(A[:,1:], u) - tu*dot(y[1:], u)*v
+    U[i+1:,i], tu = householder(A[0,1:] - V[i:,i][0]*Y[i+1:,i])
+    X[i:,i] = tu*dot(A[:,1:],  U[i+1:,i]) - tu*dot(Y[i+1:,i],  U[i+1:,i])*V[i:,i]
     
-    A -= outer(v, y)
-    A[:,1:] -= outer(x, u)
+    A -= dot(V[:,:K], Y.T)
+    A[:,1:] -= dot(X,  U[i+1:,:K].T)
     
-#~ def bidiagonalize(A):
-    #~ k = 1
-    #~ i = 0
-    #~ 
-    #~ #Householder of column
-    #~ v, tv = householder(A[i:,i])
-    #~ y = tv*dot(A.T, v)
-    #~ A -= outer(v,y)
-    #~ 
-    #~ #Householder of rows
-    #~ u, tu = householder(A[i,i+1:])
-    #~ x = tu*dot(A[:,i+1:], u)
-    #~ A[:,i+1:] -= np.outer(x, u)
-    #~ 
-    #~ print A
+    return U, A, V 
     
 np.random.seed(0)
 A = np.random.rand(4, 4)
-bidiagonalize(A)
+U, A, V = bidiagonalize(A)
+print A
