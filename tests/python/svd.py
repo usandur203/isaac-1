@@ -44,7 +44,8 @@ def labrd(A, M, N, tauq, taup, d, s, X, Y, NB):
             X[i+1:,i] -= dot(X[i+1:,:i]     , X[:i,i])
             X[i+1:,i] *= taup[i]
             
-def gebd2(A, M, N, tauq, taup, d, s):
+def gebd2(A, tauq, taup, d, s):
+    M, N = A.shape
     for i in range(N):
         # Householder vector
         A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
@@ -65,12 +66,13 @@ def gebrd(A, tauq, taup, d, s, nb):
     X = np.zeros((M, nb))
     Y = np.zeros((N, nb))
     i = 0
-    while M - i < nb:
+    while M - i >= nb:
+        print i
         labrd(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], s[i:], X[i:,:], Y[i:,:], nb)
         i += nb
         A[i:,i:] -= np.dot(A[i:,i-nb:i], Y[i:,:].T)
         A[i:,i:] -= np.dot(X[i:,:], A[i-nb:i,i:])
-    gebd2(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], s[i:])
+    gebd2(A[i:,i:], tauq[i:], taup[i:], d[i:], s[i:])
     
     
     
@@ -137,25 +139,25 @@ def bdsqr(s, e):
 		if ii > maxitr:
 			break
 		
-def orgbr(vect, A, tau):
+def orgbr(vect, A, K, tau):
     M = A.shape[0]
     N = A.shape[1]
     if vect=='Q':
         Q = np.eye(M)
-        for i in reversed(range(M)):
+        for i in reversed(range(K)):
             x = np.dot(Q[i:,i:].T,A[i:,i])
             Q[i:,i:] -= np.outer(tau[i]*A[i:,i], x)
         return Q
     if vect=='P':
         PT = np.eye(N)
-        for i in reversed(range(N-1)):
+        for i in reversed(range(K-1)):
             x = np.dot(PT[i:,i+1:],A[i,i+1:])
             PT[i:,i+1:] -= np.outer(x,tau[i]*A[i,i+1:])
         return PT    
     
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(5,5).astype(np.float32)
+A = np.random.rand(7,5).astype(np.float32)
 mindim = min(A.shape)
 T = np.copy(A)
 
@@ -166,8 +168,8 @@ d = np.zeros(mindim)
 
 gebrd(A, tauq, taup, d, s, 4)
 
-Q = orgbr('Q', A, tauq)
-PT = orgbr('P', A, taup) 
+Q = orgbr('Q', A, mindim, tauq)
+PT = orgbr('P', A, mindim, taup) 
 B = np.zeros(A.shape)
 B[:mindim, :mindim] = np.diag(d) + np.diag(s, 1 if A.shape[0]>=A.shape[1] else -1)
-print np.linalg.norm(np.dot(Q, np.dot(B, PT)) - T)
+print np.dot(Q, np.dot(B, PT)) - T
