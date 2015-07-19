@@ -261,7 +261,7 @@ def matrixmultiply(a,b):
 
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(5, 5)
+A = np.random.rand(4,5).T
 u, q, e, v = svd(A.tolist())
-print np.array(u)
+print q, e
 #print np.dot(u, np.dot(np.diag(q) + np.diag(e[1:],1), np.transpose(v)))

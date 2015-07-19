@@ -1,8 +1,8 @@
 import numpy as np
 from numpy import dot, outer, sqrt, cos, sin
 from math import atan2
-#Bidiagonalization
 
+#Bidiagonalization
 def sign(x):
 	return 1 if x>=0 else -1
 	
@@ -30,7 +30,7 @@ def labrd(A, NB):
         A[i:, i]   -= dot(X[i:, :i]     , A[:i, i])
         #Householder A[i:,i]
         A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
-        
+        #print i, A
         if i < NB - 1:
             #Compute Y[i+1:,i]
             Y[i+1:, i]  = dot(A[i:,i+1:].T  , A[i:, i])
@@ -51,9 +51,31 @@ def labrd(A, NB):
             X[:i,i]    = dot(A[:i, i+1:]    , A[i, i+1:])
             X[i+1:,i] -= dot(X[i+1:,:i]     , X[:i,i])
             X[i+1:,i] *= taup[i]
-        
+            
     return A, d, s, tauq, taup
 
+def gebd2(A):
+    M, N = A.shape
+    tauq = np.zeros(N)
+    taup = np.zeros(N)
+    s = np.zeros(N)
+    d = np.zeros(N)
+    for i in range(N):
+        # Householder vector
+        A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
+        #  Apply H(i) to A(i:m,i+1:n) from the left
+        x  = dot(A[i:,i+1:].T  , A[i:, i])
+        A[i:,i+1:] -= tauq[i]*np.outer(A[i:,i], x)
+        if i < N - 1:
+            # Householder vector
+            A[i,i+1:], taup[i], s[i+1] = larfg(A[i,i+1:])
+            # Apply G(i) to A(i+1:m,i+1:n) from the right 
+            x = dot(A[i+1:,i+1:],A[i,i+1:])
+            A[i+1:, i+1:] -= taup[i]*np.outer(x, A[i,i+1:])
+        else:
+            taup[i] = 0
+    return A, d, s, tauq, taup
+    
 #Diagonalization
 def rot(f, g):
 	if f==0:
@@ -104,7 +126,7 @@ def svd22(a, b, c, d):
 	V = [W[0]*C[0], W[1]*C[1], W[2]*C[0], W[3]*C[1]]
 	return U, sig, V
 	
-	
+
 def bdsqr(s, e):
 	N = d.size
 	khi = N
@@ -132,16 +154,19 @@ def orgbr(vect, A, tau):
             x = np.dot(PT[i:,i+1:],A[i,i+1:])
             PT[i:,i+1:] -= np.outer(x,tau[i]*A[i,i+1:])
         return PT
-        
-    
+
+
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(5, 5)
+A = np.random.rand(4, 4).astype(np.float32)
+mindim = min(A.shape)
 T = np.copy(A)
-#A = np.diag([1,2,3,4,5]) + np.diag([5,6,7,8],1) + np.diag([8,9,10],2)
-A = A.astype(np.float32)
+
 A, d, s, tauq, taup = labrd(A, A.shape[0])
+#A, d, s, tauq, taup = gebd2(A)
+
 Q = orgbr('Q', A, tauq)
 PT = orgbr('P', A, taup) 
-B = np.diag(d) + np.diag(s[1:],1)
+B = np.zeros(A.shape)
+B[:mindim, :mindim] = np.diag(d) + np.diag(s[1:], 1 if A.shape[0]>=A.shape[1] else -1)
 print np.dot(Q, np.dot(B, PT)) - T
