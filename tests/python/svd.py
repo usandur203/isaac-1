@@ -14,16 +14,8 @@ def larfg(x):
     r /= x[0] - a
     return r, sigma, a
 
-def labrd(A, NB):
-    if(A.dtype==np.int32):
-        A = A.astype(np.float32)
+def labrd(A, M, N, tauq, taup, d, s, X, Y, NB):
     M, N = A.shape
-    X = np.zeros((M, NB))
-    Y = np.zeros((N, NB))
-    tauq = np.zeros(NB)
-    taup = np.zeros(NB)
-    s = np.zeros(NB)
-    d = np.zeros(NB)
     for i in range(NB):
         #Update A[i:, i]
         A[i:, i]   -= dot(A[i:, :i]     , Y[i, :i])
@@ -31,7 +23,7 @@ def labrd(A, NB):
         #Householder A[i:,i]
         A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
         #print i, A
-        if i < NB - 1:
+        if i < N - 1:
             #Compute Y[i+1:,i]
             Y[i+1:, i]  = dot(A[i:,i+1:].T  , A[i:, i])
             Y[:i, i]    = dot(A[i:,:i].T    , A[i:, i])
@@ -43,7 +35,7 @@ def labrd(A, NB):
             A[i, i+1:] -= dot(Y[i+1:,:i+1], A[i,:i+1])
             A[i, i+1:] -= dot(A[:i, i+1:].T, X[i,:i]) 
             #Householder of A[i, i+1:]
-            A[i, i+1:], taup[i], s[i+1] = larfg(A[i,i+1:])
+            A[i, i+1:], taup[i], s[i] = larfg(A[i,i+1:])
             #Compute X[i+1:,i]
             X[i+1:,i]  = dot(A[i+1:,i+1:]   , A[i,i+1:])
             X[:i+1,i]  = dot(Y[i+1:,:i+1].T , A[i,i+1:])
@@ -52,14 +44,8 @@ def labrd(A, NB):
             X[i+1:,i] -= dot(X[i+1:,:i]     , X[:i,i])
             X[i+1:,i] *= taup[i]
             
-    return A, d, s, tauq, taup
-
-def gebd2(A):
+def gebd2(A, tauq, taup, d, s):
     M, N = A.shape
-    tauq = np.zeros(N)
-    taup = np.zeros(N)
-    s = np.zeros(N)
-    d = np.zeros(N)
     for i in range(N):
         # Householder vector
         A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
@@ -68,13 +54,25 @@ def gebd2(A):
         A[i:,i+1:] -= tauq[i]*np.outer(A[i:,i], x)
         if i < N - 1:
             # Householder vector
-            A[i,i+1:], taup[i], s[i+1] = larfg(A[i,i+1:])
+            A[i,i+1:], taup[i], s[i] = larfg(A[i,i+1:])
             # Apply G(i) to A(i+1:m,i+1:n) from the right 
             x = dot(A[i+1:,i+1:],A[i,i+1:])
             A[i+1:, i+1:] -= taup[i]*np.outer(x, A[i,i+1:])
         else:
             taup[i] = 0
-    return A, d, s, tauq, taup
+
+def gebrd(A, tauq, taup, d, s, nb):
+    M, N = A.shape
+    X = np.zeros((M, nb))
+    Y = np.zeros((N, nb))
+    for i in range(0, M, nb):
+        labrd(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], s[i:], X[i:,:], Y[i:,:], nb)
+        if(i+nb < M):
+            A[i+nb:,i+nb:] -= np.dot(A[i+nb:,i:i+nb], Y[i+nb:,:].T)
+            A[i+nb:,i+nb:] -= np.dot(X[i+nb:,:], A[i:i+nb,i+nb:])
+        
+    
+    
     
 #Diagonalization
 def rot(f, g):
@@ -153,20 +151,25 @@ def orgbr(vect, A, tau):
         for i in reversed(range(N-1)):
             x = np.dot(PT[i:,i+1:],A[i,i+1:])
             PT[i:,i+1:] -= np.outer(x,tau[i]*A[i,i+1:])
-        return PT
-
-
+        return PT    
+    
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(4, 4).astype(np.float32)
+A = np.random.rand(12,12).astype(np.float32)
 mindim = min(A.shape)
 T = np.copy(A)
 
-A, d, s, tauq, taup = labrd(A, A.shape[0])
-#A, d, s, tauq, taup = gebd2(A)
+tauq = np.zeros(mindim)
+taup = np.zeros(mindim)
+s = np.zeros(mindim-1)
+d = np.zeros(mindim)
 
+#labrd(A, tauq, taup, d, s, 4)
+#gebd2(A, tauq, taup, d, s)
+gebrd(A, tauq, taup, d, s, 4)
+print d, s
 Q = orgbr('Q', A, tauq)
 PT = orgbr('P', A, taup) 
 B = np.zeros(A.shape)
-B[:mindim, :mindim] = np.diag(d) + np.diag(s[1:], 1 if A.shape[0]>=A.shape[1] else -1)
+B[:mindim, :mindim] = np.diag(d) + np.diag(s, 1 if A.shape[0]>=A.shape[1] else -1)
 print np.dot(Q, np.dot(B, PT)) - T
