@@ -44,8 +44,7 @@ def labrd(A, M, N, tauq, taup, d, s, X, Y, NB):
             X[i+1:,i] -= dot(X[i+1:,:i]     , X[:i,i])
             X[i+1:,i] *= taup[i]
             
-def gebd2(A, tauq, taup, d, s):
-    M, N = A.shape
+def gebd2(A, M, N, tauq, taup, d, s):
     for i in range(N):
         # Householder vector
         A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
@@ -65,12 +64,13 @@ def gebrd(A, tauq, taup, d, s, nb):
     M, N = A.shape
     X = np.zeros((M, nb))
     Y = np.zeros((N, nb))
-    for i in range(0, M, nb):
+    i = 0
+    while M - i < nb:
         labrd(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], s[i:], X[i:,:], Y[i:,:], nb)
-        if(i+nb < M):
-            A[i+nb:,i+nb:] -= np.dot(A[i+nb:,i:i+nb], Y[i+nb:,:].T)
-            A[i+nb:,i+nb:] -= np.dot(X[i+nb:,:], A[i:i+nb,i+nb:])
-        
+        i += nb
+        A[i:,i:] -= np.dot(A[i:,i-nb:i], Y[i:,:].T)
+        A[i:,i:] -= np.dot(X[i:,:], A[i-nb:i,i:])
+    gebd2(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], s[i:])
     
     
     
@@ -155,7 +155,7 @@ def orgbr(vect, A, tau):
     
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(12,12).astype(np.float32)
+A = np.random.rand(5,5).astype(np.float32)
 mindim = min(A.shape)
 T = np.copy(A)
 
@@ -164,12 +164,10 @@ taup = np.zeros(mindim)
 s = np.zeros(mindim-1)
 d = np.zeros(mindim)
 
-#labrd(A, tauq, taup, d, s, 4)
-#gebd2(A, tauq, taup, d, s)
 gebrd(A, tauq, taup, d, s, 4)
-print d, s
+
 Q = orgbr('Q', A, tauq)
 PT = orgbr('P', A, taup) 
 B = np.zeros(A.shape)
 B[:mindim, :mindim] = np.diag(d) + np.diag(s, 1 if A.shape[0]>=A.shape[1] else -1)
-print np.dot(Q, np.dot(B, PT)) - T
+print np.linalg.norm(np.dot(Q, np.dot(B, PT)) - T)
