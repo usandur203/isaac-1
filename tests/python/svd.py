@@ -17,6 +17,7 @@ def larfg(x):
 def labrd(A, M, N, tauq, taup, d, s, X, Y, NB):
     M, N = A.shape
     for i in range(NB):
+        print i
         #Update A[i:, i]
         A[i:, i]   -= dot(A[i:, :i]     , Y[i, :i])
         A[i:, i]   -= dot(X[i:, :i]     , A[:i, i])
@@ -66,8 +67,7 @@ def gebrd(A, tauq, taup, d, s, nb):
     X = np.zeros((M, nb))
     Y = np.zeros((N, nb))
     i = 0
-    while M - i >= nb:
-        print i
+    while N - i >= nb:
         labrd(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], s[i:], X[i:,:], Y[i:,:], nb)
         i += nb
         A[i:,i:] -= np.dot(A[i:,i-nb:i], Y[i:,:].T)
@@ -75,7 +75,22 @@ def gebrd(A, tauq, taup, d, s, nb):
     gebd2(A[i:,i:], tauq[i:], taup[i:], d[i:], s[i:])
     
     
-    
+def orgbr(vect, A, K, tau):
+    M = A.shape[0]
+    N = A.shape[1]
+    if vect=='Q':
+        Q = np.eye(M)
+        for i in reversed(range(K)):
+            x = np.dot(Q[i:,i:].T,A[i:,i])
+            Q[i:,i:] -= np.outer(tau[i]*A[i:,i], x)
+        return Q
+    if vect=='P':
+        PT = np.eye(N)
+        for i in reversed(range(K-1)):
+            x = np.dot(PT[i:,i+1:],A[i,i+1:])
+            PT[i:,i+1:] -= np.outer(x,tau[i]*A[i,i+1:])
+        return PT    
+        
 #Diagonalization
 def rot(f, g):
 	if f==0:
@@ -94,13 +109,13 @@ def isqr_forward(d, s):
 	cs = 1
 	M = d.size
 	for i in range(M - 1):
-		cs, sn, r = rot(d[i], s[i])
+		cs, sn, r = rot(d[i]*cs, s[i])
 		if i > 0:
 			s[i-1] = oldsn*r
-		oldcs, oldn, d[i] = rot(oldcs*r, d[i+1])
-	h = sn*cs
-	s[N - 2] = h*oldsn
-	d[N - 1] = h*oldcs
+		oldcs, oldsn, d[i] = rot(oldcs*r, d[i+1]*sn)
+	h = d[M-1]*cs
+	s[M - 2] = h*oldsn
+	d[M - 1] = h*oldcs
 	
 def svd22(a, b, c, d):
 	'''Closed Form SVD of A = [a b ; c d]'''
@@ -139,25 +154,11 @@ def bdsqr(s, e):
 		if ii > maxitr:
 			break
 		
-def orgbr(vect, A, K, tau):
-    M = A.shape[0]
-    N = A.shape[1]
-    if vect=='Q':
-        Q = np.eye(M)
-        for i in reversed(range(K)):
-            x = np.dot(Q[i:,i:].T,A[i:,i])
-            Q[i:,i:] -= np.outer(tau[i]*A[i:,i], x)
-        return Q
-    if vect=='P':
-        PT = np.eye(N)
-        for i in reversed(range(K-1)):
-            x = np.dot(PT[i:,i+1:],A[i,i+1:])
-            PT[i:,i+1:] -= np.outer(x,tau[i]*A[i,i+1:])
-        return PT    
+
     
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(7,5).astype(np.float32)
+A = np.random.rand(4,4).astype(np.float32)
 mindim = min(A.shape)
 T = np.copy(A)
 
@@ -173,3 +174,9 @@ PT = orgbr('P', A, mindim, taup)
 B = np.zeros(A.shape)
 B[:mindim, :mindim] = np.diag(d) + np.diag(s, 1 if A.shape[0]>=A.shape[1] else -1)
 print np.dot(Q, np.dot(B, PT)) - T
+
+for i in range(10):
+    isqr_forward(d, s)
+print d, s
+
+print np.linalg.svd(T)[1]
