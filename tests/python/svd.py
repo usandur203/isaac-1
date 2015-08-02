@@ -104,19 +104,76 @@ def rot(f, g):
 		tt = sqrt(1 + t**2)
 		return t/tt, 1/tt, g*tt
 		
-def isqr_forward(d, s):
-	oldcs = 1
-	cs = 1
-	M = d.size
-	for i in range(M - 1):
-		cs, sn, r = rot(d[i]*cs, s[i])
-		if i > 0:
-			s[i-1] = oldsn*r
-		oldcs, oldsn, d[i] = rot(oldcs*r, d[i+1]*sn)
-	h = d[M-1]*cs
-	s[M - 2] = h*oldsn
-	d[M - 1] = h*oldcs
-	
+def isqr(shift, direction, d, s):
+    oldcs = 1
+    cs = 1
+    M = d.size
+    if shift==0:
+        if direction=='forward':
+            for i in range(M - 1):
+                cs, sn, r = rot(d[i]*cs, s[i])
+                if i > 0:
+                    s[i-1] = oldsn*r
+                oldcs, oldsn, d[i] = rot(oldcs*r, d[i+1]*sn)
+            h = d[M-1]*cs
+            s[M - 2] = h*oldsn
+            d[M - 1] = h*oldcs
+        if direction=='backward':
+            for i in range(M-1, 0, -1):
+                cs, sn, r = rot(d[i]*cs, s[i-1])
+                if i < M - 1:
+                    s[i] = oldsn*r
+                oldcs, oldsn, d[i] = rot(oldcs*r, d[i-1]*sn)
+            h = d[0]*cs
+            s[0] = h*oldsn
+            d[0] = h*oldcs
+    else:
+        if direction=='forward':
+            sign = 1 if d[0] > 0 else -1
+            f = (abs(d[0]) - shift) * (sign + shift/d[0])
+            g = s[0]
+            for i in range(M - 1):
+                cs, sn, r = rot(f, g)
+                if i > 0:
+                    s[i-1] = r
+                f = cs * d[i] + sn * s[i]
+                s[i] = cs*s[i] - sn*d[i]
+                g = sn * d[i+1]
+                d[i+1] = cs*d[i+1]
+                
+                cs, sn, r = rot(f, g)
+                d[i] = r
+                f = cs*s[i] + sn*d[i+1]
+                d[i+1] = cs*d[i+1] - sn*s[i]
+                if i < M - 2:
+                    g = sn * s[i+1]
+                    s[i+1] = cs*s[i+1]
+            s[M-2] = f
+            
+        if direction=='backward':
+            sign = 1 if d[M-1] > 0 else -1
+            f = (abs(d[M-1]) - shift)*(sign + shift/d[M-1])
+            g = s[M-2]
+            for i in range(M-1, 0, -1):
+                cs, sn, r = rot(f, g)
+                if i < M-1:
+                    s[i] = r
+                f = cs*d[i] + sn*s[i-1]
+                s[i-1] = cs*s[i-1] - sn*d[i]
+                g = sn*d[i-1]
+                d[i-1] = cs*d[i-1]
+                
+                cs, sn, r = rot(f, g)
+                d[i] = r
+                f = cs*s[i-1] + sn*d[i-1]
+                d[i-1] = cs*d[i-1] - sn*s[i-1]
+                if i > 1:
+                    g = sn*s[i-2]
+                    s[i-2] = cs*s[i-2]
+            s[0] = f
+    
+    
+    
 def svd22(a, b, c, d):
 	'''Closed Form SVD of A = [a b ; c d]'''
 	#Phi
@@ -158,7 +215,7 @@ def bdsqr(s, e):
     
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(4,4).astype(np.float32)
+A = np.random.rand(6,6).astype(np.float32)
 mindim = min(A.shape)
 T = np.copy(A)
 
@@ -175,8 +232,8 @@ B = np.zeros(A.shape)
 B[:mindim, :mindim] = np.diag(d) + np.diag(s, 1 if A.shape[0]>=A.shape[1] else -1)
 print np.dot(Q, np.dot(B, PT)) - T
 
-for i in range(10):
-    isqr_forward(d, s)
+for i in range(3):
+    isqr(1e-8,'backward',d, s)
 print d, s
 
 print np.linalg.svd(T)[1]
