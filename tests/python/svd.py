@@ -199,17 +199,57 @@ def svd22(a, b, c, d):
 	return U, sig, V
 	
 
-def bdsqr(s, e):
-	N = d.size
-	khi = N
-	ii = 0
-	maxitr = 1
-	thres = 1e-4
-	for i in range(maxitr):
-		if khi<=1:
-			break
-		if ii > maxitr:
-			break
+def bdsqr(d, em tol = 1e-4, maxit = 6):
+    N = d.size
+    maxit = maxit*N**2
+    xmin = np.finfo(d.dtype).xmin
+    eps = np.finfo(d.dtype).epps
+    #Set threshold
+    if tol >= 0:
+        sminoa = abs(d[0])
+        mu = sminoa
+        for i in range(1, N):
+            if sminoa==0:
+                break
+            mu = abs(d[i])*mu/(mu + abs(e[i-1]))
+            sminoa = min(sminoa, mu)
+        sminoa /= np.sqrt(N)
+        thresh = max(tol*sminoa, maxit * xmin)
+    else:
+        smax = max(max(abs(d)),max(abs(e)))
+        thresh = max(abs(tol)*smax, maxit*xmin)
+    #Main iteration
+    M = N
+	for i in range(maxit):
+        if M <= 1:
+            break
+        #Find diagonal block to work on
+        if tol < 0 and abs(d[M-1]) <= thresh:
+            d[M-1] = 0
+        smax = abs(D[M-1])
+        smin = smax
+        for ll in reversed(range(M-1)):
+            abss = abs(d[ll])
+            abse = abs(e[ll])
+            if tol < 0 and abss <= thresh:
+                d[ll] = 0
+            if abse <= thresh:
+                e[ll] = 0
+                break
+            smin = min(smin, abss)
+            smax = max(max(smax,abss),abse)
+        #Convergence of bottom value
+        if e[M-2]==0:
+            M -= 1
+            continue
+        #Handles 2 x 2 block
+        ll = ll + 1
+        if ll==M-2:
+            d[ll], d[ll+1] = svd22(d[ll], e[ll], 0, d[ll+1])
+            e[ll] = 0
+            M -= 2
+            continue
+        isqr(0,'forward',d, e)
 		
 
     
@@ -232,8 +272,6 @@ B = np.zeros(A.shape)
 B[:mindim, :mindim] = np.diag(d) + np.diag(e, 1 if A.shape[0]>=A.shape[1] else -1)
 print np.dot(Q, np.dot(B, PT)) - T
 
-for i in range(10):
-    isqr(0,'backward',d, e)
-print d, e
+print bdsqr(d, e)
 
 print np.linalg.svd(T)[1]
