@@ -17,7 +17,6 @@ def larfg(x):
 def labrd(A, M, N, tauq, taup, d, e, X, Y, NB):
     M, N = A.shape
     for i in range(NB):
-        print i
         #Update A[i:, i]
         A[i:, i]   -= dot(A[i:, :i]     , Y[i, :i])
         A[i:, i]   -= dot(X[i:, :i]     , A[:i, i])
@@ -199,7 +198,7 @@ def svd22(a, b, c, d):
 	return U, sig, V
 	
 
-def bdsqr(d, em tol = 1e-4, maxit = 6):
+def bdsqr(d, em, tol = 1e-4, maxit = 6):
     N = d.size
     maxit = maxit*N**2
     xmin = np.finfo(d.dtype).xmin
@@ -220,7 +219,7 @@ def bdsqr(d, em tol = 1e-4, maxit = 6):
         thresh = max(abs(tol)*smax, maxit*xmin)
     #Main iteration
     M = N
-	for i in range(maxit):
+    for i in range(maxit):
         if M <= 1:
             break
         #Find diagonal block to work on
