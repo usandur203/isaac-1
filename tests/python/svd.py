@@ -6,22 +6,22 @@ from math import atan2
 def sign(x):
 	return 1 if x>=0 else -1
 	
-def larfg(x):
-    a = -np.sign(x[0])*np.linalg.norm(x)
-    sigma = (a - x[0])/a
-    r = np.copy(x)
-    r[0] = x[0] - a
-    r /= x[0] - a
-    return r, sigma, a
+def larfg(alpha, x):
+    xnorm = np.linalg.norm(x)
+    beta = -np.sign(alpha)*np.sqrt(alpha**2 + xnorm**2)
+    sigma = (beta - alpha)/beta
+    x /= alpha - beta
+    return x, sigma, beta
 
-def labrd(A, M, N, tauq, taup, d, e, X, Y, NB):
+def labrd(A, tauq, taup, d, e, X, Y, NB):
     M, N = A.shape
     for i in range(NB):
         #Update A[i:, i]
         A[i:, i]   -= dot(A[i:, :i]     , Y[i, :i])
         A[i:, i]   -= dot(X[i:, :i]     , A[:i, i])
         #Householder A[i:,i]
-        A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
+        A[i+1:, i], tauq[i], d[i] = larfg(A[i,i], A[i+1:, i])
+        A[i, i] = 1
         #print i, A
         if i < N - 1:
             #Compute Y[i+1:,i]
@@ -35,7 +35,8 @@ def labrd(A, M, N, tauq, taup, d, e, X, Y, NB):
             A[i, i+1:] -= dot(Y[i+1:,:i+1], A[i,:i+1])
             A[i, i+1:] -= dot(A[:i, i+1:].T, X[i,:i]) 
             #Householder of A[i, i+1:]
-            A[i, i+1:], taup[i], e[i] = larfg(A[i,i+1:])
+            A[i, i+2:], taup[i], e[i] = larfg(A[i,i+1], A[i,i+2:])
+            A[i, i+1] = 1
             #Compute X[i+1:,i]
             X[i+1:,i]  = dot(A[i+1:,i+1:]   , A[i,i+1:])
             X[:i+1,i]  = dot(Y[i+1:,:i+1].T , A[i,i+1:])
@@ -48,13 +49,15 @@ def gebd2(A, tauq, taup, d, e):
     M, N = A.shape
     for i in range(N):
         # Householder vector
-        A[i:, i], tauq[i], d[i] = larfg(A[i:, i])
+        A[i+1:, i], tauq[i], d[i] = larfg(A[i,i], A[i+1:, i])
+        A[i, i] = 1
         #  Apply H(i) to A(i:m,i+1:n) from the left
         x  = dot(A[i:,i+1:].T  , A[i:, i])
         A[i:,i+1:] -= tauq[i]*np.outer(A[i:,i], x)
         if i < N - 1:
             # Householder vector
-            A[i,i+1:], taup[i], e[i] = larfg(A[i,i+1:])
+            A[i,i+2:], taup[i], e[i] = larfg(A[i,i+1], A[i,i+2:])
+            A[i,i+1] = 1
             # Apply G(i) to A(i+1:m,i+1:n) from the right 
             x = dot(A[i+1:,i+1:],A[i,i+1:])
             A[i+1:, i+1:] -= taup[i]*np.outer(x, A[i,i+1:])
@@ -67,7 +70,7 @@ def gebrd(A, tauq, taup, d, e, nb):
     Y = np.zeros((N, nb))
     i = 0
     while N - i >= nb:
-        labrd(A[i:,i:], M - i, N - i, tauq[i:], taup[i:], d[i:], e[i:], X[i:,:], Y[i:,:], nb)
+        labrd(A[i:,i:], tauq[i:], taup[i:], d[i:], e[i:], X[i:,:], Y[i:,:], nb)
         i += nb
         A[i:,i:] -= np.dot(A[i:,i-nb:i], Y[i:,:].T)
         A[i:,i:] -= np.dot(X[i:,:], A[i-nb:i,i:])
