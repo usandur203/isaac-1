@@ -296,7 +296,7 @@ ISAACAPI math_expression zeros(int_t M, int_t N, numeric_type dtype, driver::Con
 ISAACAPI math_expression reshape(array const &, int_t, int_t);
 
 //diag
-array diag(array & x, int offset);
+array diag(array & x, int offset = 0);
 
 //Row
 ISAACAPI math_expression row(array const &, value_scalar const &);
