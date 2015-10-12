@@ -39,12 +39,9 @@ class map_functor : public traversal_functor
     //Scalar
     if(a->shape()[0]==1 && a->shape()[1]==1)
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 's'));
-    //Column vector
-    else if(a->shape()[0]>1 && a->shape()[1]==1)
+    //Vector
+    else if(a->shape()[0]==1 || a->shape()[1]==1)
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 'c'));
-//    //Row vector
-//    else if(a->shape()[0]==1 && a->shape()[1]>1)
-//      return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 'r'));
     //Matrix
     else
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 'm'));

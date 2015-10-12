@@ -68,22 +68,26 @@ public:
         if (is_bound)
         {
             kernel_.setArg(current_arg_++, a->data());
+            int_t start = a->start()[0] + a->start()[1]*a->ld();
+            int_t stride = a->stride()[0];
+            int_t ld = a->stride()[1]*a->ld();
             //scalar
             if(a->shape()[0]==1 && a->shape()[1]==1)
             {
-                kernel_.setSizeArg(current_arg_++, a->start()[0] + a->start()[1]*a->ld());
+                kernel_.setSizeArg(current_arg_++, start);
             }
-            //array
-            else if(a->shape()[0]>1 && a->shape()[1]==1)
+            //vector
+            else if(a->shape()[0]==1 || a->shape()[1]==1)
             {
-                kernel_.setSizeArg(current_arg_++, a->start()[0] + a->start()[1]*a->ld());
-                kernel_.setSizeArg(current_arg_++, std::max(a->stride()[0], a->stride()[1]));
+                kernel_.setSizeArg(current_arg_++, start);
+                kernel_.setSizeArg(current_arg_++, (a->shape()[0] > 1)?stride:ld);
             }
+            //matrix
             else
             {
-                kernel_.setSizeArg(current_arg_++, a->ld()*a->stride()[1]);
-                kernel_.setSizeArg(current_arg_++, a->start()[0] + a->start()[1]*a->ld());
-                kernel_.setSizeArg(current_arg_++, a->stride()[0]);
+                kernel_.setSizeArg(current_arg_++, ld);
+                kernel_.setSizeArg(current_arg_++, start);
+                kernel_.setSizeArg(current_arg_++, stride);
             }
         }
     }
