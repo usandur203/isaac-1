@@ -484,19 +484,19 @@ size4 elementwise_size(U const & u, V const & v)
 }
 
 template<class U, class V>
-bool check_elementwise(U const & u, V const & v)
+void check_elementwise(U const & u, V const & v)
 {
-  return true;
-  return detail::max(u.shape())==1 || detail::max(v.shape())==1 || u.shape()==v.shape();
+  auto check = [](int_t a, int_t b){ return a==b || a==1 || b==1; };
+  assert(check(u.shape()[0], v.shape()[0]) && check(u.shape()[1], v.shape()[1]));
 }
 
 #define DEFINE_ELEMENT_BINARY_OPERATOR(OP, OPNAME, DTYPE) \
 math_expression OPNAME (array const & x, math_expression const & y) \
-{ assert(check_elementwise(x, y));\
+{ check_elementwise(x, y);\
   return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OP), x.context(), DTYPE, elementwise_size(x, y)); } \
 \
 math_expression OPNAME (array const & x, array const & y) \
-{ assert(check_elementwise(x, y));\
+{ check_elementwise(x, y);\
   return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OP), x.context(), DTYPE, elementwise_size(x, y)); }\
 \
 math_expression OPNAME (array const & x, value_scalar const & y) \
@@ -507,11 +507,11 @@ math_expression OPNAME (array const & x, for_idx_t const & y) \
 \
 \
 math_expression OPNAME (math_expression const & x, math_expression const & y) \
-{ assert(check_elementwise(x, y));\
+{ check_elementwise(x, y);\
   return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OP), x.context(), DTYPE, elementwise_size(x, y)); } \
  \
 math_expression OPNAME (math_expression const & x, array const & y) \
-{ assert(check_elementwise(x, y));\
+{ check_elementwise(x, y);\
   return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OP), x.context(), DTYPE, elementwise_size(x, y)); } \
 \
 math_expression OPNAME (math_expression const & x, value_scalar const & y) \
