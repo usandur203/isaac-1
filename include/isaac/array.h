@@ -113,6 +113,8 @@ class ISAACAPI view : public array
 public:
   view(array& data, slice const & s1);
   view(array& data, slice const & s1, slice const & s2);
+  view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc);
+
   using array::operator=;
 };
 

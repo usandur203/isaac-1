@@ -322,6 +322,7 @@ std::string gemv::generate_impl(std::string const & suffix, math_expression cons
   stream << "}" << std::endl;
   }
 
+//  std::cout << stream.str() << std::endl;
   return stream.str();
 }
 

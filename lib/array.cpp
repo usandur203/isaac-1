@@ -186,6 +186,7 @@ int_t array::dsize() const
 
 array & array::operator=(array const & rhs)
 {
+    if(detail::min(shape_)==0) return *this;
     assert(dtype_ == rhs.dtype());
     math_expression expression(*this, rhs, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ASSIGN_TYPE), context_, dtype_, shape_);
     execute(execution_handler(expression));
@@ -194,6 +195,7 @@ array & array::operator=(array const & rhs)
 
 array & array::operator=(value_scalar const & rhs)
 {
+    if(detail::min(shape_)==0) return *this;
     assert(dtype_ == rhs.dtype());
     math_expression expression(*this, rhs, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ASSIGN_TYPE), context_, dtype_, shape_);
     execute(execution_handler(expression));
@@ -203,6 +205,7 @@ array & array::operator=(value_scalar const & rhs)
 
 array& array::operator=(execution_handler const & c)
 {
+  if(detail::min(shape_)==0) return *this;
   assert(dtype_ == c.x().dtype());
   math_expression expression(*this, c.x(), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ASSIGN_TYPE), context_, dtype_, shape_);
   execute(execution_handler(expression, c.execution_options(), c.dispatcher_options(), c.compilation_options()));
@@ -313,12 +316,23 @@ view array::operator[](slice const & e1)
 }
 
 view array::operator()(slice const & s1, slice const & s2)
-{ return view(*this, s1, s2); }
+{
+  assert(nshape()==2);
+  int_t size1 = s1.size(shape_[0]);
+  int_t size2 = s2.size(shape_[1]);
+  if(size1==1)
+    return view(size2, dtype_, data_, s1.start + s2.start*ld_, s2.stride*ld_);
+  else if(s2.size(shape_[1])==1)
+    return view(size1, dtype_, data_, s1.start + s2.start*ld_, s1.stride);
+  else
+    return view(*this, s1, s2);
+}
 
 //---------------------------------------
 /*--- View ---*/
 view::view(array& data, slice const & s1) : array(data, s1) {}
 view::view(array& data, slice const & s1, slice const & s2) : array(data, s1, s2) {}
+view::view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc) : array(size1, dtype, data, start, inc) {}
 
 
 //---------------------------------------
@@ -566,7 +580,9 @@ DEFINE_ELEMENT_BINARY_OPERATOR(OPERATOR_ELEMENT_NEQ_TYPE, operator !=, INT_TYPE)
 #define DEFINE_OUTER(LTYPE, RTYPE) \
 math_expression outer(LTYPE const & x, RTYPE const & y)\
 {\
-    assert(x.nshape()==1 && y.nshape()==1);\
+    assert(x.nshape()<=1 && y.nshape()<=1);\
+    if(x.nshape()<1 || y.nshape()<1)\
+      return x*y;\
     return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_OUTER_PROD_TYPE), x.context(), x.dtype(), size4(detail::max(x.shape()), detail::max(y.shape())) );\
 }\
 
@@ -867,6 +883,12 @@ math_expression reshape(math_expression const & x, int_t shape0, int_t shape1)
 #define DEFINE_DOT(LTYPE, RTYPE) \
 math_expression dot(LTYPE const & x, RTYPE const & y)\
 {\
+  numeric_type dtype = x.dtype();\
+  driver::Context const & context = x.context();\
+  if(x.shape()[1]==0)\
+    return zeros(x.shape()[0], y.shape()[1], dtype, context);\
+  if(x.shape()[0]==0 || y.shape()[1]==0)\
+    return math_expression(invalid_node(), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_INVALID_TYPE), context, dtype, size4(0,0,0,0));\
   if(x.nshape()<1 || y.nshape()<1){\
     return x*y;\
   }\

@@ -421,16 +421,17 @@ void math_expression_representation_functor::append(lhs_rhs_element const & lhs_
   {
       size4 shape = lhs_rhs.array->shape();
       char prefix;
-      if(shape[0]==1 && shape[1]==1) prefix = '0';
-      else if(shape[0]>1 && shape[1]==1) prefix = '1';
-      else prefix = '2';
+      if(shape[0]==1 && shape[1]==1)
+        prefix = '0';
+      else if(shape[0]==1 || shape[1]==1)
+        prefix = '1';
+      else
+        prefix = '2';
       numeric_type dtype = lhs_rhs.array->dtype();
-      driver::Buffer const & data = lhs_rhs.array->data();
-
       *ptr_++=prefix;
       *ptr_++=(char)dtype;
 
-      append_id(ptr_, binder_.get(data, is_assigned));
+      append_id(ptr_, binder_.get(lhs_rhs.array, is_assigned));
   }
 }
 

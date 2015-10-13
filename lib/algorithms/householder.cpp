@@ -42,7 +42,7 @@ namespace isaac
             //Compute Y[i+1:,i]
             Y(ip1__, i)   = dot(A(i__, ip1__).T, A(i__, i));
             Y(__i, i)     = dot(A(i__, __i)  .T, A(i__, i));
-            Y(ip1__, i)  -= dot(Y(ip1__, i)    , Y(__i, i));
+            Y(ip1__, i)  -= dot(Y(ip1__, __i)    , Y(__i, i));
             Y(__i, i)     = dot(X(i__, __i)  .T, A(i__, i));
             Y(ip1__, i)  -= dot(A(__i, ip1__).T, Y(__i, i));
             Y(ip1__, i)  *= tauq[i];

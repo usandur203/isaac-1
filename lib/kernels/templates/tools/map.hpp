@@ -35,13 +35,14 @@ class map_functor : public traversal_functor
   std::shared_ptr<mapped_object> create(array const * a, bool is_assigned)  const
   {
     std::string dtype = to_string(a->dtype());
-    unsigned int id = binder_.get(a->data(), is_assigned);
+    unsigned int id = binder_.get(a, is_assigned);
     //Scalar
     if(a->shape()[0]==1 && a->shape()[1]==1)
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 's'));
     //Vector
-    else if(a->shape()[0]==1 || a->shape()[1]==1)
+    else if(a->shape()[0]==1 || a->shape()[1]==1){
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 'c'));
+    }
     //Matrix
     else
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 'm'));

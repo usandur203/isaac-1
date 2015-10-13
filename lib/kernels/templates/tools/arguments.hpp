@@ -64,7 +64,7 @@ public:
 
     void set_arguments(array const * a, bool is_assigned) const
     {
-        bool is_bound = binder_.bind(a->data(), is_assigned);
+        bool is_bound = binder_.bind(a, is_assigned);
         if (is_bound)
         {
             kernel_.setArg(current_arg_++, a->data());
