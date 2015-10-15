@@ -112,13 +112,11 @@ void test(T epsilon, sc::driver::Context const & ctx)
   INIT_MATRIX(M, SUBM, 5, 3, N, SUBN, 7, 2, cC, C, ctx);
   INIT_VECTOR(M, SUBM, 5, 3, cx, x, ctx);
   INIT_VECTOR(N, SUBN, 7, 2, cy, y, ctx);
-#define TEST_OPERATIONS(TYPE)\
-  test_impl(epsilon, cA_ ## TYPE, cB_ ## TYPE, cC_ ## TYPE, cx_ ## TYPE, cy_ ## TYPE, A_ ## TYPE, B_ ## TYPE, C_ ## TYPE, x_ ## TYPE, y_ ## TYPE);\
 
   std::cout << "> standard..." << std::endl;
-  TEST_OPERATIONS(full);
+  test_impl(epsilon, cA, cB, cC, cx, cy, A, B, C, x, y);
   std::cout << "> slice..." << std::endl;
-  TEST_OPERATIONS(slice);
+  test_impl(epsilon, cA_s, cB_s, cC_s, cx_s, cy_s, A_s, B_s, C_s, x_s, y_s);
 }
 
 int main()

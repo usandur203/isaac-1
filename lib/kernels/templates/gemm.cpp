@@ -534,14 +534,13 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     {
       stream << KernelPrefix(backend) << " void " << reduce_name << "(" << _size_t << " M, " << _size_t << " N, " << _size_t << " D, "
                                  << Global(backend) << " " << sdtype << "* Z, "  << _size_t << " Zld,"
-                                 << Global(backend) << " " << sdtype << "* C, "  << _size_t << " ldc," << _size_t << " Cstart1," << _size_t << " Cstart2," << _size_t << " Cstride1, "  << _size_t << " Cstride2, "
+                                 << Global(backend) << " " << sdtype << "* C, "  << _size_t << " ldc," << _size_t << " Cstart," << _size_t << " Cstride,"
                                  << sdtype << " beta)"
                                  << std::endl;
       stream << "{" << std::endl;
       stream.inc_tab();
 
-      stream << "C += Cstart1 + Cstart2*ldc;" << std::endl;
-      stream << "ldc *= Cstride2;" << std::endl;
+      stream << "C += Cstart;" << std::endl;
       stream << "for(unsigned int i = " << GlobalIdx0(backend) << " ;  i < M ;  i += " << GlobalSize0(backend) << ")" << std::endl;
       stream << "{" << std::endl;
       stream.inc_tab();
@@ -553,7 +552,7 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
       stream.inc_tab();
       stream << "acc += Z[i + j*Zld + k*Zld*N];" << std::endl;
       stream.dec_tab();
-      stream << "C[i*Cstride1 + j*ldc] = acc + beta*C[i + j*ldc];" << std::endl;
+      stream << "C[i*Cstride + j*ldc] = acc + beta*C[i + j*ldc];" << std::endl;
       stream.dec_tab();
       stream << "}" << std::endl;
       stream.dec_tab();
@@ -604,20 +603,20 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     gemm.setSizeArg(current_arg++, N);
     gemm.setSizeArg(current_arg++, K);
     gemm.setArg(current_arg++, out->data());
-    gemm.setSizeArg(current_arg++, out->ld()*out->stride()[1]);
-    gemm.setSizeArg(current_arg++, out->start()[0] + out->start()[1]*out->ld());
-    gemm.setSizeArg(current_arg++, out->stride()[0]);
+    gemm.setSizeArg(current_arg++, out->ld());
+    gemm.setSizeArg(current_arg++, out->start());
+    gemm.setSizeArg(current_arg++, out->stride());
 
     helper.set_arguments(alpha.dtype(), alpha.values());
     gemm.setArg(current_arg++, A.data());
-    gemm.setSizeArg(current_arg++, A.ld()*A.stride()[1]);
-    gemm.setSizeArg(current_arg++, (A.start()[0] + A.start()[1]*A.ld()));
-    gemm.setSizeArg(current_arg++, A.stride()[0]);
+    gemm.setSizeArg(current_arg++, A.ld());
+    gemm.setSizeArg(current_arg++, A.start());
+    gemm.setSizeArg(current_arg++, A.stride());
 
     gemm.setArg(current_arg++, B.data());
-    gemm.setSizeArg(current_arg++, B.ld()*B.stride()[1]);
-    gemm.setSizeArg(current_arg++, B.start()[0] + B.start()[1]*B.ld());
-    gemm.setSizeArg(current_arg++, B.stride()[0]);
+    gemm.setSizeArg(current_arg++, B.ld());
+    gemm.setSizeArg(current_arg++, B.start());
+    gemm.setSizeArg(current_arg++, B.stride());
 
     helper.set_arguments(beta.dtype(), beta.values());
     options.enqueue(program.context(), gemm, global, local);
@@ -636,10 +635,8 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
       reduce.setSizeArg(current_arg++, out->ld());
       reduce.setArg(current_arg++, C.data());
       reduce.setSizeArg(current_arg++, C.ld());
-      reduce.setSizeArg(current_arg++, C.start()[0]);
-      reduce.setSizeArg(current_arg++, C.start()[1]);
-      reduce.setSizeArg(current_arg++, C.stride()[0]);
-      reduce.setSizeArg(current_arg++, C.stride()[1]);
+      reduce.setSizeArg(current_arg++, C.start());
+      reduce.setSizeArg(current_arg++, C.stride());
       helper.set_arguments(beta.dtype(), beta.values());
       options.enqueue(program.context(), reduce, global, local);
     }
@@ -696,9 +693,9 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     array * pC = args.C->array;
 
     //Check if requires fallback
-    int_t ldstrideA = pA->stride()[0];
-    int_t ldstrideB = pB->stride()[0];
-    int_t ldstrideC = pC->stride()[0];
+    int_t ldstrideA = pA->stride();
+    int_t ldstrideB = pB->stride();
+    int_t ldstrideC = pC->stride();
 
     numeric_type dtype = args.C->dtype;
 

@@ -48,10 +48,10 @@ void test_impl(T epsilon,  simple_vector_base<T> & cx, simple_vector_base<T> & c
   {
       cl_command_queue clqueue = queue.handle().cl();
 
-      RUN_TEST("DOT", cs+=cx[i]*cy[i], 0, cs, BLAS<T>::F(clblasSdot, clblasDdot)(N, CHANDLE(ds), 0, CHANDLE(x), x.start()[0], x.stride()[0],
-                                                                                     CHANDLE(y), y.start()[0], y.stride()[0],
+      RUN_TEST("DOT", cs+=cx[i]*cy[i], 0, cs, BLAS<T>::F(clblasSdot, clblasDdot)(N, CHANDLE(ds), 0, CHANDLE(x), OFF(x), INC(x),
+                                                                                     CHANDLE(y), OFF(y), INC(y),
                                                                                      CHANDLE(scratch), 1, &clqueue, 0, NULL, NULL));
-      RUN_TEST("ASUM", cs+=std::fabs(cx[i]), 0, cs, BLAS<T>::F(clblasSasum, clblasDasum)(N, CHANDLE(ds), 0, CHANDLE(x), x.start()[0], x.stride()[0],
+      RUN_TEST("ASUM", cs+=std::fabs(cx[i]), 0, cs, BLAS<T>::F(clblasSasum, clblasDasum)(N, CHANDLE(ds), 0, CHANDLE(x), OFF(x), INC(x),
                                                                                                 CHANDLE(scratch), 1, &clqueue, 0, NULL, NULL));
   }
 
@@ -78,16 +78,12 @@ void test(T epsilon, sc::driver::Context const & ctx)
   INIT_VECTOR(N, SUBN, 0, 1, cx, x, ctx);
   INIT_VECTOR(N, SUBN, 0, 1, cy, y, ctx);
 
-#define TEST_OPERATIONS(TYPE, ITF)\
-  test_impl(epsilon, cx_ ## TYPE, cy_ ## TYPE,\
-                                    x_ ## TYPE, y_ ## TYPE, ITF);\
-
   std::cout << "> standard..." << std::endl;
-  TEST_OPERATIONS(full, clBLAS);
-  TEST_OPERATIONS(full, CPP);
+  test_impl(epsilon, cx, cy, x, y, clBLAS);
+  test_impl(epsilon, cx, cy, x, y, CPP);
   std::cout << "> slice..." << std::endl;
-  TEST_OPERATIONS(slice, clBLAS);
-  TEST_OPERATIONS(slice, CPP);
+  test_impl(epsilon, cx_s, cy_s, x_s, y_s, clBLAS);
+  test_impl(epsilon, cx_s, cy_s, x_s, y_s, CPP);
 }
 
 

@@ -68,26 +68,23 @@ public:
         if (is_bound)
         {
             kernel_.setArg(current_arg_++, a->data());
-            int_t start = a->start()[0] + a->start()[1]*a->ld();
-            int_t stride = a->stride()[0];
-            int_t ld = a->stride()[1]*a->ld();
             //scalar
             if(a->shape()[0]==1 && a->shape()[1]==1)
             {
-                kernel_.setSizeArg(current_arg_++, start);
+                kernel_.setSizeArg(current_arg_++, a->start());
             }
             //vector
             else if(a->shape()[0]==1 || a->shape()[1]==1)
             {
-                kernel_.setSizeArg(current_arg_++, start);
-                kernel_.setSizeArg(current_arg_++, (a->shape()[0] > 1)?stride:ld);
+                kernel_.setSizeArg(current_arg_++, a->start());
+                kernel_.setSizeArg(current_arg_++, (a->shape()[0] > 1)?a->stride():a->ld());
             }
             //matrix
             else
             {
-                kernel_.setSizeArg(current_arg_++, ld);
-                kernel_.setSizeArg(current_arg_++, start);
-                kernel_.setSizeArg(current_arg_++, stride);
+                kernel_.setSizeArg(current_arg_++, a->ld());
+                kernel_.setSizeArg(current_arg_++, a->start());
+                kernel_.setSizeArg(current_arg_++, a->stride());
             }
         }
     }

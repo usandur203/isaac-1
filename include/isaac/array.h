@@ -16,8 +16,6 @@ class view;
 
 class ISAACAPI array
 {
-//protected:
-//  array(numeric_type dtype, driver::Buffer data, slice const & s1, slice const & s2, int_t ld);
 public:
   //1D Constructors
   explicit array(int_t size1, numeric_type dtype = FLOAT_TYPE, driver::Context const & context = driver::backend::contexts::get_default());
@@ -48,8 +46,8 @@ public:
   numeric_type dtype() const;
   size4 const & shape() const;
   int_t nshape() const;
-  size4 const & start() const;
-  size4 const & stride() const;
+  int_t start() const;
+  int_t stride() const;
   int_t const & ld() const;
   driver::Context const & context() const;
   driver::Buffer const & data() const;
@@ -97,8 +95,8 @@ protected:
   numeric_type dtype_;
 
   size4 shape_;
-  size4 start_;
-  size4 stride_;
+  int_t start_;
+  int_t stride_;
   int_t ld_;
 
   driver::Context context_;
