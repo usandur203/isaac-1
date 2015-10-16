@@ -114,6 +114,18 @@ namespace isaac
       gebd2(A(i__, i__), tauq + i, taup + i, d + i, e + i);
   }
 
+  //orgxr
+
+  void org2r(char flag, array& A, int_t K, float* tau)
+  {
+
+  }
+
+  void orgqr(char flag, array& A, int_t K, float* tau)
+  {
+
+  }
+
   void orgbr(char flag, array& A, int_t K, float* tau)
   {
       int_t M = A.shape()[0];

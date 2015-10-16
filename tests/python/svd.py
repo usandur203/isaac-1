@@ -76,22 +76,53 @@ def gebrd(A, tauq, taup, d, e, nb):
         A[i:,i:] -= np.dot(X[i:,:], A[i-nb:i,i:])
     gebd2(A[i:,i:], tauq[i:], taup[i:], d[i:], e[i:])
     
-    
+
+def org2r(A, K, tau):
+    M, N = A.shape
+    for i in reversed(range(K)):
+        if i < N - 1:
+            A[i,i] = 1
+            x = np.dot(A[i:,i+1:].T, A[i:,i])
+            A[i:,i+1:] -= tau[i]*np.outer(A[i:,i], x)            
+        if i < M - 1:
+            A[i+1:, i] *= -tau[i]
+        A[i,i] = 1 - tau[i]
+        A[:i, i] = 0
+    return A
+
+def orgl2(A, K, tau):
+    M, N = A.shape
+    for i in reversed(range(K)):
+        if i < M - 1:
+            A[i, i] = 1
+            x = np.dot(A[i+1:, i:], A[i, i:])
+            A[i+1:, i:] -= tau[i]*np.outer(x, A[i,i:])
+        if i < N - 1 :
+            A[i, i+1:] *= -tau[i]
+        A[i, i] = 1 - tau[i]
+        A[i, :i] = 0        
+
+def orgqr(A, K, tau):
+    return org2r(A, K, tau)
+
+def orglq(A, K, tau):
+    return orgl2(A, K, tau)
+            
 def orgbr(vect, A, K, tau):
     M = A.shape[0]
     N = A.shape[1]
     if vect=='Q':
-        Q = np.eye(M)
-        for i in reversed(range(K)):
-            x = np.dot(Q[i:,i:].T,A[i:,i])
-            Q[i:,i:] -= np.outer(tau[i]*A[i:,i], x)
+        Q = np.copy(A)
+        orgqr(Q, K, tau)
         return Q
     if vect=='P':
-        PT = np.eye(N)
-        for i in reversed(range(K-1)):
-            x = np.dot(PT[i:,i+1:],A[i,i+1:])
-            PT[i:,i+1:] -= np.outer(x,tau[i]*A[i,i+1:])
-        return PT    
+        PT = np.copy(A)
+        PT = np.roll(PT, 1, axis=0)
+        PT[:,0] = 0
+        PT[0,:] = 0
+        PT[0,0] = 1
+        orglq(PT[1:,1:], K-1, tau)
+        return PT
         
 #Diagonalization
 def rot(f, g):
@@ -257,7 +288,7 @@ def bdsqr(d, em, tol = 1e-4, maxit = 6):
     
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(6,6).astype(np.float32)
+A = np.random.rand(5,5).astype(np.float32)
 mindim = min(A.shape)
 T = np.copy(A)
 
@@ -270,10 +301,10 @@ gebrd(A, tauq, taup, d, e, 4)
 
 Q = orgbr('Q', A, mindim, tauq)
 PT = orgbr('P', A, mindim, taup) 
-B = np.zeros(A.shape)
-B[:mindim, :mindim] = np.diag(d) + np.diag(e, 1 if A.shape[0]>=A.shape[1] else -1)
+B = np.diag(d) + np.diag(e, 1 if A.shape[0]>=A.shape[1] else -1)
+#print B
 print np.dot(Q, np.dot(B, PT)) - T
 
-print bdsqr(d, e)
+#print bdsqr(d, e)
 
-print np.linalg.svd(T)[1]
+#print np.linalg.svd(T)[1]
