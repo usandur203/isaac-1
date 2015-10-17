@@ -52,15 +52,13 @@ def gebd2(A, tauq, taup, d, e):
         A[i+1:, i], tauq[i], d[i] = larfg(A[i,i], A[i+1:, i])
         A[i, i] = 1
         #  Apply H(i) to A(i:m,i+1:n) from the left
-        x  = dot(A[i:,i+1:].T  , A[i:, i])
-        A[i:,i+1:] -= tauq[i]*np.outer(A[i:,i], x)
+        larf('L', A[i:,i], tauq[i], A[i:,i+1:]) 
         if i < N - 1:
             # Householder vector
             A[i,i+2:], taup[i], e[i] = larfg(A[i,i+1], A[i,i+2:])
             A[i,i+1] = 1
             # Apply G(i) to A(i+1:m,i+1:n) from the right 
-            x = dot(A[i+1:,i+1:],A[i,i+1:])
-            A[i+1:, i+1:] -= taup[i]*np.outer(x, A[i,i+1:])
+            larf('R', A[i,i+1:], taup[i], A[i+1:, i+1:])
         else:
             taup[i] = 0
 
@@ -76,14 +74,21 @@ def gebrd(A, tauq, taup, d, e, nb):
         A[i:,i:] -= np.dot(X[i:,:], A[i-nb:i,i:])
     gebd2(A[i:,i:], tauq[i:], taup[i:], d[i:], e[i:])
     
+def larf(side, v, tau, C):
+    if side=='L':
+        x = np.dot(C.T, v)
+        C -= tau*np.outer(v, x)
+    else:
+        x = np.dot(C, v)
+        C -= tau*np.outer(x, v)
+
 
 def org2r(A, K, tau):
     M, N = A.shape
     for i in reversed(range(K)):
         if i < N - 1:
             A[i,i] = 1
-            x = np.dot(A[i:,i+1:].T, A[i:,i])
-            A[i:,i+1:] -= tau[i]*np.outer(A[i:,i], x)            
+            larf('L', A[i:,i], tau[i], A[i:,i+1:])
         if i < M - 1:
             A[i+1:, i] *= -tau[i]
         A[i,i] = 1 - tau[i]
@@ -95,8 +100,7 @@ def orgl2(A, K, tau):
     for i in reversed(range(K)):
         if i < M - 1:
             A[i, i] = 1
-            x = np.dot(A[i+1:, i:], A[i, i:])
-            A[i+1:, i:] -= tau[i]*np.outer(x, A[i,i:])
+            larf('R', A[i, i:], tau[i], A[i+1:, i:])
         if i < N - 1 :
             A[i, i+1:] *= -tau[i]
         A[i, i] = 1 - tau[i]

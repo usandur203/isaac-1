@@ -5,14 +5,17 @@
 
 namespace isaac
 {
-  void larfg(isaac::view x, float* tau, float* alpha);
-  void labrd(isaac::view A, float* tauq, float* taup, float* d, float* e, isaac::view X, isaac::view Y);
+  void larf(char side, view v, float tau, view C);
+  void larfg(view x, float* tau, float* alpha);
+  void labrd(view A, float* tauq, float* taup, float* d, float* e, view X, view Y);
 
-  void gebd2(isaac::view A, float* tauq, float* taup, float* d, float* e);
+  void gebd2(view A, float* tauq, float* taup, float* d, float* e);
   void gebrd(array& A, float* tauq, float* taup, float* d, float* e, int_t nb);
-  //orgxr
-  void org2r(char flag, array& A, int_t K, float* tau);
-  void orgqr(char flag, array& A, int_t K, float* tau);
+
+  void org2r(view A, int_t K, float* tau);
+  void orgqr(view A, int_t K, float* tau);
+  void orgl2(view A, int_t K, float* tau);
+  void orglq(view A, int_t K, float* tau);
   void orgbr(char flag, array& A, int_t K, float* tau);
 }
 

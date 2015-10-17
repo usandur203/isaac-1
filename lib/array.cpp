@@ -952,7 +952,7 @@ void copy(void const * data, array& x, driver::CommandQueue & queue, bool blocki
   else
   {
     array tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
-    queue.write(x.data(), blocking, 0, tmp.dsize()*dtypesize, data);
+    queue.write(tmp.data(), blocking, 0, tmp.dsize()*dtypesize, data);
     x = tmp;
   }
 }
@@ -973,7 +973,9 @@ void copy(array const & x, void* data, driver::CommandQueue & queue, bool blocki
 }
 
 void copy(void const *data, array &x, bool blocking)
-{ copy(data, x, driver::backend::queues::get(x.context(), 0), blocking); }
+{
+  copy(data, x, driver::backend::queues::get(x.context(), 0), blocking);
+}
 
 void copy(array const & x, void* data, bool blocking)
 { copy(x, data, driver::backend::queues::get(x.context(), 0), blocking); }

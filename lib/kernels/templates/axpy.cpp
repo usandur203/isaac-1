@@ -116,7 +116,7 @@ std::string axpy::generate_impl(std::string const & suffix, math_expression cons
   {
     std::string array1 = dtype + " #namereg = " + vload(p_.simd_width, "#scalartype", "i*#stride", "#pointer", "1", backend, false) + ";";
     std::string array_access = "#scalartype #namereg = #pointer[#index];";
-    std::string matrix_row = dtype + " #namereg = " + vload(p_.simd_width, "#scalartype", "i", "#pointer + #row*#stride", "#ld", backend, false) + ";";
+    std::string matrix_row = dtype + " #namereg = " + vload(p_.simd_width, "#scalartype", "i*#ld", "#pointer + #row*#stride", "#ld", backend, false) + ";";
     std::string matrix_column = dtype + " #namereg = " + vload(p_.simd_width, "#scalartype", "i*#stride", "#pointer + #column*#ld", "#stride", backend, false) + ";";
     std::string matrix_diag = dtype + " #namereg = " + vload(p_.simd_width, "#scalartype", "i*(#ld + #stride)", "#pointer + ((#diag_offset<0)?-#diag_offset:(#diag_offset*#ld))", "#ld + #stride", backend, false) + ";";
     process(stream, RHS_NODE_TYPE, {{"array1", array1}, {"matrix_row", matrix_row}, {"matrix_column", matrix_column},
@@ -136,7 +136,7 @@ std::string axpy::generate_impl(std::string const & suffix, math_expression cons
   for(std::size_t idx: assigned)
   {
     std::string array1 = vstore(p_.simd_width, "#scalartype", "#namereg", "i*#stride", "#pointer", "1", backend, false) + ";";
-    std::string matrix_row = vstore(p_.simd_width, "#scalartype", "#namereg", "i", "#pointer + #row*#stride", "#ld", backend, false) + ";";
+    std::string matrix_row = vstore(p_.simd_width, "#scalartype", "#namereg", "i*#ld", "#pointer + #row*#stride", "#ld", backend, false) + ";";
     std::string matrix_column = vstore(p_.simd_width, "#scalartype", "#namereg", "i*#stride", "#pointer + #column*#ld", "#stride", backend, false) + ";";
     std::string matrix_diag = vstore(p_.simd_width, "#scalartype", "#namereg", "i*(#ld + #stride)", "#pointer + (#diag_offset<0)?-#diag_offset:(#diag_offset*#ld)", "#ld + #stride", backend, false) + ";";
     process(stream, LHS_NODE_TYPE, {{"array1", array1}, {"matrix_row", matrix_row}, {"matrix_column", matrix_column}, {"matrix_diag", matrix_diag}}, expressions, idx, mappings, processed);
@@ -164,7 +164,6 @@ std::string axpy::generate_impl(std::string const & suffix, math_expression cons
 
   stream.dec_tab();
   stream << "}" << std::endl;
-
 //  std::cout << stream.str() << std::endl;
 
   return stream.str();

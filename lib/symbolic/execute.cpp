@@ -118,7 +118,7 @@ namespace isaac
           parse(array, node.lhs.node_index, breakpoints, type_left, false);
       else if(node.lhs.subtype == DENSE_ARRAY_TYPE)
       {
-          if(node.lhs.array->nshape()==1)
+          if(node.op.type==OPERATOR_MATRIX_ROW_TYPE || node.op.type==OPERATOR_MATRIX_COLUMN_TYPE || node.lhs.array->nshape()==1)
               type_left = AXPY_TYPE;
           else
               type_left = GER_TYPE;
@@ -130,7 +130,7 @@ namespace isaac
           parse(array, node.rhs.node_index, breakpoints, type_right, false);
       else if(node.rhs.subtype == DENSE_ARRAY_TYPE)
       {
-          if(node.rhs.array->nshape()==1)
+          if(node.op.type==OPERATOR_MATRIX_ROW_TYPE || node.op.type==OPERATOR_MATRIX_COLUMN_TYPE || node.rhs.array->nshape()==1)
               type_right = AXPY_TYPE;
           else
               type_right = GER_TYPE;
