@@ -6,6 +6,7 @@
 
 namespace isaac
 {
+
   void larfg(view x, float* tau, float* a)
   {
     float xnorm = value_scalar(norm(x));
@@ -14,10 +15,26 @@ namespace isaac
     else
     {
       float alpha = *a;
-      float sign = alpha>0?1:-1;
+      float sign = alpha>=0?1:-1;
       float beta = -sign*std::sqrt(alpha*alpha + xnorm*xnorm);
+      float safmin = lamch<float>('S')/lamch<float>('E');
+      if(std::abs(beta) < safmin)
+      {
+        int knt = 0;
+        while(std::abs(beta) < safmin){
+          x /= safmin;
+          beta /= safmin;
+          alpha /= safmin;
+          knt++;
+        }
+        xnorm = value_scalar(norm(x));
+        sign = alpha>=0?1:-1;
+        beta = -sign*std::sqrt(alpha*alpha + xnorm*xnorm);
+        for(int j = 0 ; j < knt ; ++j)
+          alpha *= safmin;
+      }
       *tau = (beta - alpha)/beta;
-      x /= (beta - alpha);
+      x /= (alpha - beta);
       *a = beta;
     }
   }
@@ -25,8 +42,6 @@ namespace isaac
   void labrd(view A, float* tauq, float* taup, float* d, float* e, view X, view Y, int_t NB)
   {
     int_t N = A.shape()[1];
-    copy(diag(A), d, false);
-    copy(diag(A, 1), e, true);
     for(int_t i = 0 ; i < NB ; ++i)
     {
         //Helper slices
@@ -36,6 +51,7 @@ namespace isaac
         A(i__, i) -= dot(A(i__, __i), Y(i, __i));
         A(i__, i) -= dot(X(i__, __i), A(__i, i));
         //Householder A[i:, i]
+        d[i] = (float)A(i,i)[0];
         larfg(A(ip1__, i), &tauq[i], &d[i]);
         A(i, i) = (float)1;
         if(i < N - 1)
@@ -51,6 +67,7 @@ namespace isaac
             A(i, ip1__)  -= dot(Y(ip1__, __ip1), A(i, __ip1));
             A(i, ip1__)  -= dot(A(__i, ip1__).T, X(i, __i));
             //Householder of A[i, i+1:]
+            e[i] = (float)A(i,i+1)[0];
             larfg(A(i, ip2__), &taup[i], &e[i]);
             A(i, i+1)     = (float)1;
             //Compute X[i+1:, i]
@@ -61,17 +78,17 @@ namespace isaac
             X(ip1__, i)  -= dot(X(ip1__,__i)     , X(__i, i));
             X(ip1__, i)  *= taup[i];
         }
+
     }
   }
 
   void gebd2(view A, float* tauq, float* taup, float* d, float* e)
   {
       int_t N = A.shape()[1];
-      copy(diag(A), d, false);
-      copy(diag(A, 1), e, true);
       for(int_t i = 0 ; i < N ; ++i)
       {
         //Householder vector
+        d[i] = (float)A(i,i)[0];
         larfg(A({i+1,end}, i), &tauq[i], &d[i]);
         A(i, i) = (float)1;
         //Apply H(i) to A[i:, i+1:] from the left
@@ -79,6 +96,7 @@ namespace isaac
         if(i < N - 1)
         {
             //Householder vector
+            e[i] = (float)A(i,i+1)[0];
             larfg(A(i, {i+2,end}), &taup[i], &e[i]);
             A(i, i+1) = (float)1;
             //Apply G(i) to A(i+1:, i_1:) from the right
@@ -91,26 +109,23 @@ namespace isaac
 
   void gebrd(array& A, float* tauq, float* taup, float* d, float* e, int_t nb)
   {
-      std::cout << A << std::endl;
       int_t M = A.shape()[0];
       int_t N = A.shape()[1];
       array X = zeros(M, nb, A.dtype(), A.context());
       array Y = zeros(N, nb, A.dtype(), A.context());
       int_t i = 0;
-//      //Blocked computations
-//      while(N - i >= nb)
-//      {
-//          slice i__(i, end), ipnb__(i+nb, end), __i_ipnb(i, i+nb);
-//          //Update nb rows/cols of A[i:, i:]
-//          labrd(A(i__,i__), tauq + i, taup + i, d + i, e + i, X(i__, all), Y(i__, all), nb);
-//          //Updates remainded A[i+nb:, i+nb:]
-//          A(ipnb__, ipnb__) -= dot(A(ipnb__, __i_ipnb), Y(ipnb__, all).T);
-//          A(ipnb__, ipnb__) -= dot(X(ipnb__, all)     , A(__i_ipnb, ipnb__));
-//          i+= nb;
-//      }
-//      //Cleanup
-      slice i__(i, end);
-      gebd2(A(i__, i__), tauq + i, taup + i, d + i, e + i);
+      //Blocked computations
+      while(N - i >= nb)
+      {
+          //Update nb rows/cols of A[i:, i:]
+          labrd(A({i,end},{i,end}), tauq + i, taup + i, d + i, e + i, X({i,end}, all), Y({i,end}, all), nb);
+          //Updates remainded A[i+nb:, i+nb:]
+          i+= nb;
+          A({i,end}, {i,end}) -= dot(A({i,end}, {i-nb, i}), Y({i,end}, all).T);
+          A({i,end}, {i,end}) -= dot(X({i,end}, all)     , A({i-nb, i}, {i,end}));
+      }
+      //Cleanup
+      gebd2(A({i,end}, {i,end}), tauq + i, taup + i, d + i, e + i);
   }
 
 
@@ -132,16 +147,16 @@ namespace isaac
   {
     int_t M = A.shape()[0];
     int_t N = A.shape()[1];
-    for(int_t i = K-1 ; i >= 0 ; ++i)
+    for(int_t i = K-1 ; i >= 0 ; --i)
     {
       if(i < N - 1){
-        A(i, i) = 1;
+        A(i, i) = (float)1;
         larf('L', A({i, end}, i), tau[i], A({i, end},{i+1, end}));
       }
       if(i < M - 1)
         A({i+1, end}, i) *= -tau[i];
       A(i, i) = 1 - tau[i];
-      A({0, i}, i) = 0;
+      A({0, i}, i) = (float)0;
     }
   }
 
@@ -149,16 +164,16 @@ namespace isaac
   {
     int_t M = A.shape()[0];
     int_t N = A.shape()[1];
-    for(int_t i = K-1 ; i >= 0 ; ++i)
+    for(int_t i = K-1 ; i >= 0 ; --i)
     {
       if(i < M - 1){
-        A(i, i) = 1;
+        A(i, i) = (float)1;
         larf('R', A(i, {i+1, end}), tau[i], A({i+1, end}, {i, end}));
       }
       if(i < N - 1)
         A(i, {i+1, end}) *= -tau[i];
       A(i, i) = 1 - tau[i];
-      A(i, {0, i}) = 0;
+      A(i, {0, i}) = (float)0;
     }
   }
 

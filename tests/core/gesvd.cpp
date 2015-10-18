@@ -28,15 +28,22 @@ int main()
   std::vector<float> d(M);
   std::vector<float> e(M-1);
 
+  sc::array G = A;
   sc::gebrd(A, ptr(tauq), ptr(taup), ptr(d), ptr(e), 4);
   std::cout << "d: "; std::copy(d.begin(), d.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
   std::cout << "e: "; std::copy(e.begin(), e.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-//  sc::array U = A;
-//  sc::array PT = A;
-//  sc::array BD = sc::zeros(M, N, sc::FLOAT_TYPE);
-//  sc::diag(BD) = d;
-//  sc::diag(BD, 1) = e;
+  sc::array Q = A;
+  std::cout << "BEFORE " << Q << std::endl;
+  sc::orgbr('Q', Q, M, ptr(tauq));
+  std::cout << "AFTER " << Q << std::endl;
+  sc::array PT = A;
+  sc::orgbr('P', PT, M, ptr(taup));
+
+  sc::array BD = sc::zeros(M, N, sc::FLOAT_TYPE);
+  sc::diag(BD) = d;
+  sc::diag(BD, 1) = e;
 //  sc::array tmp = sc::dot(BD, PT);
+//  std::cout << sc::dot(Q, tmp) << std::endl;
 //  std::cout << G - sc::dot(U, tmp) << std::endl;
 
     long int lda = cA.ld();

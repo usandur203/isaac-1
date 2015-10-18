@@ -11,6 +11,7 @@ def larfg(alpha, x):
     beta = -np.sign(alpha)*np.sqrt(alpha**2 + xnorm**2)
     sigma = (beta - alpha)/beta
     x /= alpha - beta
+    print 'beta', beta, 'alpha', alpha, 'sigma', sigma
     return x, sigma, beta
 
 def labrd(A, tauq, taup, d, e, X, Y, NB):
@@ -44,7 +45,7 @@ def labrd(A, tauq, taup, d, e, X, Y, NB):
             X[:i,i]    = dot(A[:i, i+1:]    , A[i, i+1:])
             X[i+1:,i] -= dot(X[i+1:,:i]     , X[:i,i])
             X[i+1:,i] *= taup[i]
-            
+        
 def gebd2(A, tauq, taup, d, e):
     M, N = A.shape
     for i in range(N):
@@ -292,7 +293,10 @@ def bdsqr(d, em, tol = 1e-4, maxit = 6):
     
 np.random.seed(0)
 np.set_printoptions(precision=2, suppress=True)
-A = np.random.rand(5,5).astype(np.float32)
+A = np.random.rand(7,7).astype(np.float32)
+for i in range(7):
+    for j in range(7):
+        A[i, j] = 1 + i + j
 mindim = min(A.shape)
 T = np.copy(A)
 

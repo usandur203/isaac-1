@@ -516,7 +516,7 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
         {
             string Ci = to_string((m/p_.simd_width)*(p_.local_size_0*p_.simd_width) + m%p_.simd_width);
             stream << "if(" << Ci << "< M) ";
-            stream << "C[" << Ci << CSTRIDE1 << "] = rC[" << m << "][" << n << "];" << std::endl;
+            stream << "C[" << Ci << CSTRIDE1 << "] = rC[" << m << "][" << n << "] + (beta?beta*" << "C[" << Ci << CSTRIDE1 << "]:0);" << std::endl;
         }
         if((n+1)%p_.simd_width==0){
             stream << "C += ldc*" << p_.local_size_1*p_.simd_width - p_.simd_width + 1 << ";" << std::endl;
@@ -697,25 +697,16 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     int_t ldstrideB = pB->stride();
     int_t ldstrideC = pC->stride();
 
-    numeric_type dtype = args.C->dtype;
-
     //Enqueue
-    value_scalar beta(0, dtype);
-    if(args.beta) beta = value_scalar(args.beta->vscalar, dtype);
-
-    value_scalar alpha(1, dtype);
-    if(args.alpha) alpha = value_scalar(args.alpha->vscalar, dtype);
-
-
     execution_options_type const & options = control.execution_options();
 
     if (ldstrideA> 1 || ldstrideB > 1 || ldstrideC > 1)
     {
-      fallback.enqueue_block(queue, M, N, K, *pA, *pB, *pC, alpha, beta, program, "fallback", options);
+      fallback.enqueue_block(queue, M, N, K, *pA, *pB, *pC, args.alpha, args.beta, program, "fallback", options);
     }
     else
     {
-        enqueue_block(queue,  M, N, K, *pA, *pB, *pC, alpha, beta, program, suffix, options);
+        enqueue_block(queue,  M, N, K, *pA, *pB, *pC, args.alpha, args.beta, program, suffix, options);
     }
   }
 

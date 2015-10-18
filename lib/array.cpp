@@ -313,9 +313,9 @@ view array::operator()(slice const & s1, slice const & s2)
   int_t size1 = s1.size(shape_[0]);
   int_t size2 = s2.size(shape_[1]);
   if(size1==1)
-    return view(size2, dtype_, data_, s1.start + s2.start*ld_, s2.stride*ld_);
+    return view(size2, dtype_, data_, start_ + s1.start + s2.start*ld_, s2.stride*ld_);
   else if(s2.size(shape_[1])==1)
-    return view(size1, dtype_, data_, s1.start + s2.start*ld_, s1.stride);
+    return view(size1, dtype_, data_, start_ + s1.start + s2.start*ld_, s1.stride);
   else
     return view(*this, s1, s2);
 }
