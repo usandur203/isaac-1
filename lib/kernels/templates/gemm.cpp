@@ -586,9 +586,9 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     bind_independent binder;
 
     array_base const * out = &C;
-    std::unique_ptr<array_base> tmp;
+    std::unique_ptr<array> tmp;
     if(p_.depth > 1){
-      tmp.reset(new array_base(M, N, p_.depth, C.dtype(), C.context()));
+      tmp.reset(new array(M, N, p_.depth, C.dtype(), C.context()));
       out = tmp.get();
     }
 

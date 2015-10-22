@@ -122,6 +122,7 @@ class simple_matrix : public simple_matrix_base<T>
 {
 public:
     simple_matrix(int_t M, int_t N) :  simple_matrix_base<T>(0, M, 1, 0, N, 1, M, data_), data_(M*N){}
+    simple_matrix(int_t M, int_t N, std::vector<T> data) : simple_matrix_base<T>(0, M, 1, 0, N, 1, M, data_), data_(data){}
 private:
     std::vector<T> data_;
 };
@@ -149,7 +150,7 @@ void init_rand(simple_matrix_base<T> & A)
 {
   for (int_t i = 0; i < A.size1(); ++i)
     for(int_t j = 0 ; j < A.size2() ; ++j)
-      A(i,j) = 1 + i + j;
+      A(i,j) = (T)rand()/RAND_MAX;
 }
 
 template<typename T>

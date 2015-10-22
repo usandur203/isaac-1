@@ -17,32 +17,36 @@ int main()
 
   long int M = 7;
   long int N = 7;
-  long int SUBM = 2;
-  long int SUBN = 2;
 
-  isaac::driver::Context const & ctx = isaac::driver::backend::contexts::get_default();
 
-  INIT_MATRIX(M, SUBM, 5, 3, N, SUBN, 7, 2, cA, A, ctx);
   std::vector<float> tauq(M);
   std::vector<float> taup(M);
   std::vector<float> d(M);
   std::vector<float> e(M-1);
+  simple_matrix<T> cA(M, N);
+  for(unsigned int i = 0 ; i < M ; ++i)
+    for(unsigned int j = 0 ; j < N ; ++j)
+      cA(i, j) = (float)rand()/RAND_MAX;
+  sc::array A(M, N, cA.data());
 
-  sc::array_base G = A;
+  sc::array G = A;
   sc::gebrd(A, ptr(tauq), ptr(taup), ptr(d), ptr(e), 4);
   std::cout << "d: "; std::copy(d.begin(), d.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
   std::cout << "e: "; std::copy(e.begin(), e.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-  sc::array_base Q = A;
-  sc::orgbr('Q', Q, M, ptr(tauq));
-  sc::array_base PT = A;
-  sc::orgbr('P', PT, M, ptr(taup));
+  std::cout << "tauq: "; std::copy(tauq.begin(), tauq.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+  std::cout << "taup: "; std::copy(taup.begin(), taup.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
 
-  sc::array_base BD = sc::zeros(M, N, sc::FLOAT_TYPE);
+  sc::array Q = A;
+  sc::orgbr('Q', Q, M, ptr(tauq));
+  sc::array PT = A;
+  sc::orgbr('P', PT, M, ptr(taup));
+  sc::array BD = sc::zeros(M, N, sc::FLOAT_TYPE);
   sc::diag(BD) = d;
   sc::diag(BD, 1) = e;
   sc::array tmp = sc::dot(BD, PT);
-//  std::cout << sc::dot(Q, tmp) << std::endl;
-//  std::cout << G - sc::dot(U, tmp) << std::endl;
+  sc::array res = sc::dot(Q, tmp);
+  res -= G;
+  std::cout << res << std::endl;
 
     long int lda = cA.ld();
 
@@ -53,9 +57,18 @@ int main()
   lwork = work[0];
   work.resize(lwork);
   sgebrd_(&M, &N, ptr(cA.data()), &lda, ptr(d), ptr(e), ptr(tauq), ptr(taup), ptr(work), &lwork, &info);
-  std::cout << "d: "; std::copy(d.begin(), d.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-  std::cout << "e: "; std::copy(e.begin(), e.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-
+//  std::cout << std::endl;
+//  std::cout << "d: "; std::copy(d.begin(), d.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+//  std::cout << "e: "; std::copy(e.begin(), e.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+//  std::cout << "tauq: "; std::copy(tauq.begin(), tauq.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+//  std::cout << "taup: "; std::copy(taup.begin(), taup.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+//  sorgbr_("P", &M, &N, &M, ptr(cA.data()), &lda, ptr(taup), ptr(work), &lwork, &info);
+//  for(unsigned int i = 0 ; i < M ; ++i)
+//  {
+//    for(unsigned int j = 0 ; j < N ; ++j)
+//      std::cout << cA(i, j) << " ";
+//    std::cout << std::endl;
+//  }
 
 //  using sc::_i0;
 //  char side = 'R';

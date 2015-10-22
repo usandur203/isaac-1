@@ -22,7 +22,7 @@ int main()
     std::vector<float> data(M*N);
     for(unsigned int i = 0 ; i < data.size(); ++i)
       data[i] = i;
-    sc::array_base A = sc::array_base(M, N, data);
+    sc::array A(M, N, data);
 
     std::cout << "A:" << std::endl;
     std::cout << sline << std::endl;

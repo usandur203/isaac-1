@@ -107,7 +107,7 @@ void bench(sc::numeric_type dtype, std::string operation)
   unsigned int dtsize = sc::size_of(dtype);
   sc::driver::CommandQueue & queue = sc::driver::backend::queues::get(sc::driver::backend::contexts::get_default(),0);
   std::map<std::string, std::string> metric{ {"axpy", "GB/s"}, {"dot", "GB/s"}, {"gemv", "GB/s"}, {"gemm", "GFLOPS"}};
-  sc::array_base flush((int)1e6, sc::FLOAT_TYPE);
+  sc::array flush((int)1e6, sc::FLOAT_TYPE);
   std::cout << "#" << operation << " (" << metric[operation] << ")" << std::endl;
   std::cout << "\"N\"";
   std::cout << " \"ISAAC\"";
@@ -136,7 +136,7 @@ void bench(sc::numeric_type dtype, std::string operation)
     for(int_t N: create_log_range((int)1e3, (int)1e8, 50, 64))
     {
       std::cout << N;
-      sc::array_base x(N, dtype), y(N, dtype);
+      sc::array x(N, dtype), y(N, dtype);
       /* ISAAC */
       std::list<sc::driver::Event> events;
       BENCHMARK_ISAAC(y = sc::execution_handler(x + alpha*y, sc::execution_options_type(0, &events)), 3*N*dtsize/t)
@@ -167,8 +167,8 @@ void bench(sc::numeric_type dtype, std::string operation)
     {
       std::cout << N;
       /* ISAAC */
-      sc::array_base x(N, dtype), y(N, dtype);
-      sc::array_base scratch(N, dtype);
+      sc::array x(N, dtype), y(N, dtype);
+      sc::array scratch(N, dtype);
       sc::scalar s(dtype);
       s = dot(x,y); queue.synchronize();
       BENCHMARK_ISAAC(s = sc::execution_handler(dot(x,y), sc::execution_options_type(0, &events)), 2*N*dtsize/t)
@@ -230,7 +230,7 @@ void bench(sc::numeric_type dtype, std::string operation)
         if(AT) std::swap(As1, As2);
 
         /* ISAAC */
-        sc::array_base A(As1, As2, dtype), y(M, dtype), x(N, dtype);
+        sc::array A(As1, As2, dtype), y(M, dtype), x(N, dtype);
     #ifdef HAS_A_BLAS
         int_t lda = A.ld();
     #endif
@@ -313,7 +313,7 @@ void bench(sc::numeric_type dtype, std::string operation)
         int_t Bs1 = K, Bs2 = N;
         if(BT) std::swap(Bs1, Bs2);
 
-        sc::array_base C(M, N, dtype), A(As1, As2, dtype), B(Bs1, Bs2, dtype);
+        sc::array C(M, N, dtype), A(As1, As2, dtype), B(Bs1, Bs2, dtype);
     #ifdef HAS_A_BLAS
         int_t lda = A.ld(), ldb = B.ld(), ldc = C.ld();
     #endif

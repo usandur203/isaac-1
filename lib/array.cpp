@@ -135,6 +135,9 @@ array_base::array_base(execution_handler const & other) :
   *this = other;
 }
 
+//Destructor
+array_base::~array_base(){ }
+
 /*--- Getters ---*/
 numeric_type array_base::dtype() const
 {
@@ -670,12 +673,12 @@ math_expression cast(math_expression const & x, numeric_type dtype)
 isaac::math_expression eye(int_t M, int_t N, isaac::numeric_type dtype, driver::Context const & ctx)
 { return math_expression(value_scalar(1), value_scalar(0), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_VDIAG_TYPE), ctx, dtype, size4(M, N)); }
 
-isaac::array_base diag(array_base & x, int offset)
+array diag(array_base & x, int offset)
 {
   int_t offi = -(offset<0)*offset, offj = (offset>0)*offset;
   int_t size = std::min(x.shape()[0] - offi, x.shape()[1] - offj);
   int_t start = offi + x.ld()*offj;
-  return array_base(size, x.dtype(), x.data(), start, x.ld()+1);
+  return array(size, x.dtype(), x.data(), start, x.ld()+1);
 }
 
 
@@ -953,7 +956,7 @@ void copy(void const * data, array_base& x, driver::CommandQueue & queue, bool b
   }
   else
   {
-    array_base tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
+    array tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
     queue.write(tmp.data(), blocking, 0, tmp.dsize()*dtypesize, data);
     x = tmp;
   }
@@ -968,7 +971,7 @@ void copy(array_base const & x, void* data, driver::CommandQueue & queue, bool b
   }
   else
   {
-    array_base tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
+    array tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
     tmp = x;
     queue.read(tmp.data(), blocking, 0, tmp.dsize()*dtypesize, data);
   }

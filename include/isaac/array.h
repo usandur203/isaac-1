@@ -40,6 +40,9 @@ public:
   array_base(math_expression const & proxy);
   array_base(execution_handler const &);
 
+  //Make the class virtual
+  virtual ~array_base() = 0;
+
   //Getters
   numeric_type dtype() const;
   size4 const & shape() const;
@@ -110,6 +113,7 @@ public:
   using array_base::array_base;
   //Copy Constructor
   array(array const &);
+  using array_base::operator=;
 };
 
 class ISAACAPI view : public array_base
@@ -301,7 +305,7 @@ ISAACAPI math_expression zeros(int_t M, int_t N, numeric_type dtype, driver::Con
 ISAACAPI math_expression reshape(array_base const &, int_t, int_t);
 
 //diag
-array_base diag(array_base & x, int offset = 0);
+array diag(array_base & x, int offset = 0);
 
 //Row
 ISAACAPI math_expression row(array_base const &, value_scalar const &);

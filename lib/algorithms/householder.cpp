@@ -111,21 +111,21 @@ namespace isaac
   {
       int_t M = A.shape()[0];
       int_t N = A.shape()[1];
-      array_base X = zeros(M, nb, A.dtype(), A.context());
-      array_base Y = zeros(N, nb, A.dtype(), A.context());
+      array X = zeros(M, nb, A.dtype(), A.context());
+      array Y = zeros(N, nb, A.dtype(), A.context());
       int_t i = 0;
       //Blocked computations
       while(N - i >= nb)
       {
           //Update nb rows/cols of A[i:, i:]
-          labrd(A({i,end},{i,end}), tauq + i, taup + i, d + i, e + i, X({i,end}, all), Y({i,end}, all), nb);
+          labrd(A({i,end},{i,end}), &tauq[i], &taup[i], &d[i], &e[i], X({i,end}, all), Y({i,end}, all), nb);
           //Updates remainded A[i+nb:, i+nb:]
           i+= nb;
           A({i,end}, {i,end}) -= dot(A({i,end}, {i-nb, i}), Y({i,end}, all).T);
           A({i,end}, {i,end}) -= dot(X({i,end}, all)     , A({i-nb, i}, {i,end}));
       }
       //Cleanup
-      gebd2(A({i,end}, {i,end}), tauq + i, taup + i, d + i, e + i);
+      gebd2(A({i,end}, {i,end}), &tauq[i], &taup[i], &d[i], &e[i]);
   }
 
 
@@ -133,12 +133,12 @@ namespace isaac
   {
     if(side=='L')
     {
-      array_base x = dot(C.T, v);
+      array x = dot(C.T, v);
       C -= tau*outer(v, x);
     }
     else
     {
-      array_base x = dot(C, v);
+      array x = dot(C, v);
       C -= tau*outer(x, v);
     }
   }
@@ -149,7 +149,6 @@ namespace isaac
     int_t N = A.shape()[1];
     for(int_t i = K-1 ; i >= 0 ; --i)
     {
-      A(i,i) = (float)32242;
       if(i < N - 1){
         A(i, i) = (float)1;
         larf('L', A({i, end}, i), tau[i], A({i, end},{i+1, end}));
@@ -169,7 +168,7 @@ namespace isaac
     {
       if(i < M - 1){
         A(i, i) = (float)1;
-        larf('R', A(i, {i+1, end}), tau[i], A({i+1, end}, {i, end}));
+        larf('R', A(i, {i, end}), tau[i], A({i+1, end}, {i, end}));
       }
       if(i < N - 1)
         A(i, {i+1, end}) *= -tau[i];
@@ -180,9 +179,7 @@ namespace isaac
 
   void orgqr(view A, int_t K, float* tau)
   {
-    std::cout << 1 << std::endl;
     org2r(A, K, tau);
-    std::cout << 2 << std::endl;
   }
 
   void orglq(view A, int_t K, float* tau)
@@ -194,10 +191,9 @@ namespace isaac
   {
       if(flag=='Q'){
         orgqr(A({0, end}, {0, end}), K, tau);
-
       }
       else{
-        execute(sfor(_i0 = A.shape()[0] - 1, _i0 >= 0, _i0-=1, assign(row(A, _i0 + 1),row(A, _i0))));
+        execute(sfor(_i0 = A.shape()[0] - 2, _i0 >= 0, _i0-=1, assign(row(A, _i0 + 1),row(A, _i0))));
         A({0, end}, 0) = (float)0;
         A(0, {0, end}) = (float)0;
         A(0, 0) = (float)1;

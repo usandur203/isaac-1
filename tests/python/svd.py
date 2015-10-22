@@ -11,7 +11,6 @@ def larfg(alpha, x):
     beta = -np.sign(alpha)*np.sqrt(alpha**2 + xnorm**2)
     sigma = (beta - alpha)/beta
     x /= alpha - beta
-    print 'beta', beta, 'alpha', alpha, 'sigma', sigma
     return x, sigma, beta
 
 def labrd(A, tauq, taup, d, e, X, Y, NB):
@@ -296,7 +295,7 @@ np.set_printoptions(precision=2, suppress=True)
 A = np.random.rand(7,7).astype(np.float32)
 for i in range(7):
     for j in range(7):
-        A[i, j] = 1 + i + j
+        A[i, j] = np.random.uniform(0,1)
 mindim = min(A.shape)
 T = np.copy(A)
 
@@ -306,9 +305,11 @@ e = np.zeros(mindim-1)
 d = np.zeros(mindim)
 
 gebrd(A, tauq, taup, d, e, 4)
-
+print tauq
+print taup
 Q = orgbr('Q', A, mindim, tauq)
 PT = orgbr('P', A, mindim, taup) 
+print PT
 B = np.diag(d) + np.diag(e, 1 if A.shape[0]>=A.shape[1] else -1)
 #print B
 print np.dot(Q, np.dot(B, PT)) - T

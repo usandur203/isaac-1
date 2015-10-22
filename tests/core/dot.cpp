@@ -16,7 +16,7 @@ void test_impl(T epsilon,  simple_vector_base<T> & cx, simple_vector_base<T> & c
   sc::driver::Context const & ctx = x.context();
   int_t N = cx.size();
   sc::driver::CommandQueue queue = sc::driver::backend::queues::get(ctx,0);
-  sc::array_base scratch(N, x.dtype());
+  sc::array scratch(N, x.dtype());
 
   unsigned int failure_count = 0;
 

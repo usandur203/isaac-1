@@ -179,7 +179,7 @@ namespace isaac
 
         /*----Parse required temporaries-----*/
         detail::parse(tree, rootidx, breakpoints, final_type);
-        std::vector<std::shared_ptr<array_base> > temporaries_;
+        std::vector<std::shared_ptr<array> > temporaries_;
 
         /*----Compute required temporaries----*/
         for(detail::breakpoints_t::iterator it = breakpoints.begin() ; it != breakpoints.end() ; ++it)
@@ -189,26 +189,26 @@ namespace isaac
           math_expression::node const & lmost = lhs_most(tree, node);
 
           //Creates temporary
-          std::shared_ptr<array_base> tmp;
+          std::shared_ptr<array> tmp;
           switch(it->first){
-            case DOT_TYPE:           tmp = std::shared_ptr<array_base>(new array_base(1, dtype, context));                                                        break;
+            case DOT_TYPE:           tmp = std::shared_ptr<array>(new array(1, dtype, context));                                                        break;
 
-            case AXPY_TYPE:         tmp = std::shared_ptr<array_base>(new array_base(lmost.lhs.array->shape()[0], dtype, context));                              break;
-            case GEMV_N_TYPE:  tmp = std::shared_ptr<array_base>(new array_base(lmost.lhs.array->shape()[0], dtype, context));                              break;
-            case GEMV_T_TYPE:  tmp = std::shared_ptr<array_base>(new array_base(lmost.lhs.array->shape()[1], dtype, context));                              break;
+            case AXPY_TYPE:         tmp = std::shared_ptr<array>(new array(lmost.lhs.array->shape()[0], dtype, context));                              break;
+            case GEMV_N_TYPE:  tmp = std::shared_ptr<array>(new array(lmost.lhs.array->shape()[0], dtype, context));                              break;
+            case GEMV_T_TYPE:  tmp = std::shared_ptr<array>(new array(lmost.lhs.array->shape()[1], dtype, context));                              break;
 
-            case GER_TYPE:         tmp = std::shared_ptr<array_base>(new array_base(lmost.lhs.array->shape()[0], lmost.lhs.array->shape()[1], dtype, context)); break;
-            case GEMM_NN_TYPE:   tmp = std::shared_ptr<array_base>(new array_base(node.lhs.array->shape()[0], node.rhs.array->shape()[1], dtype, context));   break;
-            case GEMM_NT_TYPE:   tmp = std::shared_ptr<array_base>(new array_base(node.lhs.array->shape()[0], node.rhs.array->shape()[0], dtype, context));   break;
-            case GEMM_TN_TYPE:   tmp = std::shared_ptr<array_base>(new array_base(node.lhs.array->shape()[1], node.rhs.array->shape()[1], dtype, context));   break;
-            case GEMM_TT_TYPE:   tmp = std::shared_ptr<array_base>(new array_base(node.lhs.array->shape()[1], node.rhs.array->shape()[0], dtype, context));   break;
+            case GER_TYPE:         tmp = std::shared_ptr<array>(new array(lmost.lhs.array->shape()[0], lmost.lhs.array->shape()[1], dtype, context)); break;
+            case GEMM_NN_TYPE:   tmp = std::shared_ptr<array>(new array(node.lhs.array->shape()[0], node.rhs.array->shape()[1], dtype, context));   break;
+            case GEMM_NT_TYPE:   tmp = std::shared_ptr<array>(new array(node.lhs.array->shape()[0], node.rhs.array->shape()[0], dtype, context));   break;
+            case GEMM_TN_TYPE:   tmp = std::shared_ptr<array>(new array(node.lhs.array->shape()[1], node.rhs.array->shape()[1], dtype, context));   break;
+            case GEMM_TT_TYPE:   tmp = std::shared_ptr<array>(new array(node.lhs.array->shape()[1], node.rhs.array->shape()[0], dtype, context));   break;
 
             default: throw std::invalid_argument("Unrecognized operation");
           }
           temporaries_.push_back(tmp);
 
           tree[rootidx].op.type = OPERATOR_ASSIGN_TYPE;
-          fill(tree[rootidx].lhs, (array_base&)*tmp);
+          fill(tree[rootidx].lhs, (array&)*tmp);
           tree[rootidx].rhs = *it->second;
           tree[rootidx].rhs.type_family = it->second->type_family;
 
@@ -217,7 +217,7 @@ namespace isaac
           tree[rootidx] = root_save;
 
           //Incorporates the temporary within the math_expression
-          fill(*it->second, (array_base&)*tmp);
+          fill(*it->second, (array&)*tmp);
         }
     }
 
