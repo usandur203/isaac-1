@@ -9,7 +9,7 @@ namespace sc = isaac;
 
 template<typename T>
 void test_impl(T epsilon, simple_vector_base<T> & cy, simple_matrix_base<T> const & cA, simple_vector_base<T> & cx,
-                                        sc::array & y, sc::array const & A, sc::array & x, interface_t interf, const char * prefix)
+                                        sc::array_base & y, sc::array_base const & A, sc::array_base & x, interface_t interf, const char * prefix)
 {
   int failure_count = 0;
 

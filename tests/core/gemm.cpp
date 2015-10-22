@@ -7,7 +7,7 @@ namespace sc = isaac;
 
 template<typename T>
 void test(T epsilon, simple_matrix_base<T> & cC, simple_matrix_base<T> const & cA, simple_matrix_base<T> const & cB,
-                          sc::array & C, sc::array const & A, sc::array const & AT,  sc::array const & B, sc::array const & BT,
+                          sc::array_base & C, sc::array_base const & A, sc::array_base const & AT,  sc::array_base const & B, sc::array_base const & BT,
                           interface_t interf, const char * prefix)
 {
   int failure_count = 0;

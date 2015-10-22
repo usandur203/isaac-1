@@ -62,7 +62,7 @@ public:
         }
     }
 
-    void set_arguments(array const * a, bool is_assigned) const
+    void set_arguments(array_base const * a, bool is_assigned) const
     {
         bool is_bound = binder_.bind(a, is_assigned);
         if (is_bound)

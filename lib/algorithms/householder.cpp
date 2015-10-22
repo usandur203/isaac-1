@@ -107,12 +107,12 @@ namespace isaac
       }
   }
 
-  void gebrd(array& A, float* tauq, float* taup, float* d, float* e, int_t nb)
+  void gebrd(array_base& A, float* tauq, float* taup, float* d, float* e, int_t nb)
   {
       int_t M = A.shape()[0];
       int_t N = A.shape()[1];
-      array X = zeros(M, nb, A.dtype(), A.context());
-      array Y = zeros(N, nb, A.dtype(), A.context());
+      array_base X = zeros(M, nb, A.dtype(), A.context());
+      array_base Y = zeros(N, nb, A.dtype(), A.context());
       int_t i = 0;
       //Blocked computations
       while(N - i >= nb)
@@ -133,12 +133,12 @@ namespace isaac
   {
     if(side=='L')
     {
-      array x = dot(C.T, v);
+      array_base x = dot(C.T, v);
       C -= tau*outer(v, x);
     }
     else
     {
-      array x = dot(C, v);
+      array_base x = dot(C, v);
       C -= tau*outer(x, v);
     }
   }
@@ -149,6 +149,7 @@ namespace isaac
     int_t N = A.shape()[1];
     for(int_t i = K-1 ; i >= 0 ; --i)
     {
+      A(i,i) = (float)32242;
       if(i < N - 1){
         A(i, i) = (float)1;
         larf('L', A({i, end}, i), tau[i], A({i, end},{i+1, end}));
@@ -179,7 +180,9 @@ namespace isaac
 
   void orgqr(view A, int_t K, float* tau)
   {
+    std::cout << 1 << std::endl;
     org2r(A, K, tau);
+    std::cout << 2 << std::endl;
   }
 
   void orglq(view A, int_t K, float* tau)
@@ -187,10 +190,11 @@ namespace isaac
     orgl2(A, K, tau);
   }
 
-  void orgbr(char flag, array& A, int_t K, float* tau)
+  void orgbr(char flag, array_base& A, int_t K, float* tau)
   {
       if(flag=='Q'){
         orgqr(A({0, end}, {0, end}), K, tau);
+
       }
       else{
         execute(sfor(_i0 = A.shape()[0] - 1, _i0 >= 0, _i0-=1, assign(row(A, _i0 + 1),row(A, _i0))));

@@ -10,13 +10,13 @@ typedef sc::int_t int_t;
 
 template<typename T>
 void test_impl(T epsilon,  simple_vector_base<T> & cx, simple_vector_base<T> & cy,
-                                sc::array & x, sc::array & y, interface_t interf)
+                                sc::array_base & x, sc::array_base & y, interface_t interf)
 {
   using namespace std;
   sc::driver::Context const & ctx = x.context();
   int_t N = cx.size();
   sc::driver::CommandQueue queue = sc::driver::backend::queues::get(ctx,0);
-  sc::array scratch(N, x.dtype());
+  sc::array_base scratch(N, x.dtype());
 
   unsigned int failure_count = 0;
 

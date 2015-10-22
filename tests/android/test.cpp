@@ -7,7 +7,7 @@ void android_main(struct android_app* state)
 {
     app_dummy(); // Make sure glue isn't stripped
     __android_log_print(ANDROID_LOG_INFO, "IsaacAndroidTest", "This is a test");
-    isaac::array test(5, isaac::FLOAT_TYPE);
+    isaac::array_base test(5, isaac::FLOAT_TYPE);
     std::ostringstream oss;
     oss << test;
     __android_log_print(ANDROID_LOG_INFO, "IsaacAndroidTest", oss.str().c_str());

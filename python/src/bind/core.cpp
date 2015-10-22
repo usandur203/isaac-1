@@ -46,7 +46,7 @@ np::dtype to_np_dtype(sc::numeric_type const & T) throw()
   }
 }
 
-bp::tuple get_shape(sc::array const & x)
+bp::tuple get_shape(sc::array_base const & x)
 {
   return bp::make_tuple(x.shape()[0], x.shape()[1]);
 }
@@ -85,7 +85,7 @@ namespace detail
       return std::shared_ptr<sc::profiles::value_type>(new sc::profiles::value_type(tools::extract_template_type(tp), tools::extract_dtype(dtype), (isaac::templates::base const &)bp::extract<isaac::templates::base>(tp), queue));
   }
 
-  std::shared_ptr<sc::array>
+  std::shared_ptr<sc::array_base>
   ndarray_to_scarray(const np::ndarray& array, sc::driver::Context const & ctx)
   {
 
@@ -97,12 +97,12 @@ namespace detail
 
     sc::numeric_type dtype = to_sc_dtype(array.get_dtype());
     sc::int_t size = (sc::int_t)array.shape(0);
-    sc::array* v = new sc::array(size, dtype, ctx);
+    sc::array_base* v = new sc::array_base(size, dtype, ctx);
 
     void* data = (void*)array.get_data();
     sc::copy(data, *v);
 
-    return std::shared_ptr<sc::array>(v);
+    return std::shared_ptr<sc::array_base>(v);
   }
 
   isaac::driver::Context const & extract_context(bp::object context)
@@ -118,19 +118,19 @@ namespace detail
   }
 
 
-  std::shared_ptr<sc::array> create_array(bp::object const & obj, bp::object odtype, bp::object pycontext)
+  std::shared_ptr<sc::array_base> create_array(bp::object const & obj, bp::object odtype, bp::object pycontext)
   {
     return ndarray_to_scarray(np::from_object(obj, to_np_dtype(tools::extract_dtype(odtype))), extract_context(pycontext));
   }
 
-  std::shared_ptr<sc::array> create_zeros_array(sc::int_t M, sc::int_t N, bp::object odtype, bp::object pycontext)
+  std::shared_ptr<sc::array_base> create_zeros_array(sc::int_t M, sc::int_t N, bp::object odtype, bp::object pycontext)
   {
-   return std::shared_ptr<sc::array>(new sc::array(sc::zeros(M, N, tools::extract_dtype(odtype), extract_context(pycontext))));
+   return std::shared_ptr<sc::array_base>(new sc::array_base(sc::zeros(M, N, tools::extract_dtype(odtype), extract_context(pycontext))));
   }
 
-  std::shared_ptr<sc::array> create_empty_array(bp::object sizes, bp::object odtype, bp::object pycontext)
+  std::shared_ptr<sc::array_base> create_empty_array(bp::object sizes, bp::object odtype, bp::object pycontext)
   {
-      typedef std::shared_ptr<sc::array> result_type;
+      typedef std::shared_ptr<sc::array_base> result_type;
 
       std::size_t len;
       int size1;
@@ -154,8 +154,8 @@ namespace detail
 
       sc::driver::Context const & context = extract_context(pycontext);
       if(len==1)
-          return result_type(new sc::array(size1, dtype, context));
-      return result_type(new sc::array(size1, size2, dtype, context));
+          return result_type(new sc::array_base(size1, dtype, context));
+      return result_type(new sc::array_base(size1, size2, dtype, context));
   }
 
   std::string type_name(bp::object const & obj)
@@ -303,14 +303,14 @@ void export_core()
   .def(bp::other<sc::math_expression>() OP bp::self) \
   ADD_SCALAR_HANDLING(OP)
 
-  bp::class_<sc::array,
-          std::shared_ptr<sc::array> >
+  bp::class_<sc::array_base,
+          std::shared_ptr<sc::array_base> >
   ( "array", bp::no_init)
       .def("__init__", bp::make_constructor(detail::create_array, bp::default_call_policies(), (bp::arg("obj"), bp::arg("dtype") = bp::scope().attr("float32"), bp::arg("context")= bp::object())))
       .def(bp::init<sc::math_expression>())
-      .add_property("dtype", &sc::array::dtype)
-      .add_property("context", bp::make_function(&sc::array::context, bp::return_internal_reference<>()))
-      .add_property("T", &sc::array::T)
+      .add_property("dtype", &sc::array_base::dtype)
+      .add_property("context", bp::make_function(&sc::array_base::context, bp::return_internal_reference<>()))
+      .add_property("T", &sc::array_base::T)
       .add_property("shape", &detail::get_shape)
       ADD_ARRAY_OPERATOR(+)
       ADD_ARRAY_OPERATOR(-)
@@ -327,7 +327,7 @@ void export_core()
       .def(bp::self_ns::str(bp::self_ns::self))
   ;
 
-  bp::class_<sc::scalar, bp::bases<sc::array> >
+  bp::class_<sc::scalar, bp::bases<sc::array_base> >
       ("scalar", bp::no_init)
       .def("__init__", bp::make_constructor(detail::construct_scalar, bp::default_call_policies(), (bp::arg(""), bp::arg("context")=bp::object())))
       ;
@@ -336,8 +336,8 @@ void export_core()
   bp::def("empty", &detail::create_empty_array, (bp::arg("shape"), bp::arg("dtype") = bp::scope().attr("float32"), bp::arg("context")=bp::object()));
 
 //Assign
-    bp::def("assign", static_cast<sc::math_expression (*)(sc::array const &, sc::array const &)>(&sc::assign));\
-    bp::def("assign", static_cast<sc::math_expression (*)(sc::array const &, sc::math_expression const &)>(&sc::assign));\
+    bp::def("assign", static_cast<sc::math_expression (*)(sc::array_base const &, sc::array_base const &)>(&sc::assign));\
+    bp::def("assign", static_cast<sc::math_expression (*)(sc::array_base const &, sc::math_expression const &)>(&sc::assign));\
 
 //Binary
 #define MAP_FUNCTION(name) \

@@ -7,7 +7,7 @@ typedef isaac::int_t int_t;
 
 template<typename T>
 void test_impl(T epsilon, simple_matrix_base<T> & cA, simple_matrix_base<T>& cB, simple_matrix_base<T>& cC, simple_vector_base<T>& cx, simple_vector_base<T>& cy,
-          sc::array& A, sc::array& B, sc::array& C, sc::array& x, sc::array& y)
+          sc::array_base& A, sc::array_base& B, sc::array_base& C, sc::array_base& x, sc::array_base& y)
 {
   using namespace std;
 

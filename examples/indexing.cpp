@@ -3,6 +3,11 @@
 
 namespace sc = isaac;
 
+void test(sc::view A)
+{
+  A(0,0) = (float)123;
+}
+
 int main()
 {
     static const char * sline = "--------------------";
@@ -17,13 +22,14 @@ int main()
     std::vector<float> data(M*N);
     for(unsigned int i = 0 ; i < data.size(); ++i)
       data[i] = i;
-    sc::array A = sc::array(M, N, data);
+    sc::array_base A = sc::array_base(M, N, data);
 
     std::cout << "A:" << std::endl;
     std::cout << sline << std::endl;
     std::cout << A << std::endl;
     std::cout << std::endl;
 
+    test(A({0,sc::end}, {0,sc::end}));
 //    std::cout << "A[3, 2:end]:" << std::endl;
 //    std::cout << sline << std::endl;
 //    std::cout << A(3, {2,sc::end}) << std::endl;

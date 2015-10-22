@@ -78,7 +78,7 @@ namespace detail
       }
       else
       {
-          std::shared_ptr<sc::array> parray(new sc::array(sc::execution_handler(expression, execution_options, dispatcher_options, compilation_options)));
+          std::shared_ptr<sc::array_base> parray(new sc::array_base(sc::execution_handler(expression, execution_options, dispatcher_options, compilation_options)));
           return bp::make_tuple(parray, tools::to_list(events.begin(), events.end()));
       }
   }

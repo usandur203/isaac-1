@@ -21,12 +21,12 @@ bind_sequential::bind_sequential()
 {
 }
 
-bool bind_sequential::bind(array const * a, bool)
+bool bind_sequential::bind(array_base const * a, bool)
 {
     return memory.insert(std::make_pair(a, current_arg_)).second;
 }
 
-unsigned int bind_sequential::get(array const * a, bool is_assigned)
+unsigned int bind_sequential::get(array_base const * a, bool is_assigned)
 {
     return bind(a, is_assigned)?current_arg_++:memory.at(a);
 }
@@ -36,12 +36,12 @@ bind_independent::bind_independent()
 {
 }
 
-bool bind_independent::bind(array const * a, bool is_assigned)
+bool bind_independent::bind(array_base const * a, bool is_assigned)
 {
     return is_assigned?true:memory.insert(std::make_pair(a, current_arg_)).second;
 }
 
-unsigned int bind_independent::get(array const * a, bool is_assigned)
+unsigned int bind_independent::get(array_base const * a, bool is_assigned)
 {
     return bind(a, is_assigned)?current_arg_++:memory.at(a);
 }

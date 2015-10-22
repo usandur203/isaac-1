@@ -32,7 +32,7 @@ class map_functor : public traversal_functor
     return std::shared_ptr<mapped_object>(new mapped_host_scalar(strdtype, binder_.get()));
   }
 
-  std::shared_ptr<mapped_object> create(array const * a, bool is_assigned)  const
+  std::shared_ptr<mapped_object> create(array_base const * a, bool is_assigned)  const
   {
     std::string dtype = to_string(a->dtype());
     unsigned int id = binder_.get(a, is_assigned);

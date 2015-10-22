@@ -569,7 +569,7 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
   }
 
   void gemm::enqueue_block(driver::CommandQueue & /*queue*/, int_t M, int_t N, int_t K,
-                     array const & A, array const & B, array const & C,
+                     array_base const & A, array_base const & B, array_base const & C,
                      value_scalar const & alpha, value_scalar const & beta,
                      driver::Program const & program, std::string const & suffix, execution_options_type const & options)
   {
@@ -585,10 +585,10 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     reduce_name += suffix;
     bind_independent binder;
 
-    array const * out = &C;
-    std::unique_ptr<array> tmp;
+    array_base const * out = &C;
+    std::unique_ptr<array_base> tmp;
     if(p_.depth > 1){
-      tmp.reset(new array(M, N, p_.depth, C.dtype(), C.context()));
+      tmp.reset(new array_base(M, N, p_.depth, C.dtype(), C.context()));
       out = tmp.get();
     }
 
@@ -688,9 +688,9 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     if(M==0 || N == 0 || K ==0)
       return;
     //Extract
-    array * pA = args.A->array;
-    array * pB = args.B->array;
-    array * pC = args.C->array;
+    array_base * pA = args.A->array;
+    array_base * pB = args.B->array;
+    array_base * pC = args.C->array;
 
     //Check if requires fallback
     int_t ldstrideA = pA->stride();

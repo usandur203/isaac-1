@@ -20,7 +20,7 @@
 namespace isaac
 {
 
-class array;
+class array_base;
 
 /** @brief Optimization enum for grouping operations into unary or binary operations. Just for optimization of lookups. */
 enum operation_node_type_family
@@ -182,7 +182,7 @@ struct lhs_rhs_element
   {
     std::size_t   node_index;
     values_holder vscalar;
-    isaac::array* array;
+    isaac::array_base* array;
     for_idx_t for_idx;
   };
 };
@@ -192,7 +192,7 @@ struct invalid_node{};
 void fill(lhs_rhs_element &x, for_idx_t index);
 void fill(lhs_rhs_element &x, invalid_node);
 void fill(lhs_rhs_element & x, std::size_t node_index);
-void fill(lhs_rhs_element & x, array const & a);
+void fill(lhs_rhs_element & x, array_base const & a);
 void fill(lhs_rhs_element & x, value_scalar const & v);
 
 class math_expression
@@ -306,8 +306,8 @@ private:
   compilation_options_type compilation_options_;
 };
 
-math_expression::node const & lhs_most(math_expression::container_type const & array, math_expression::node const & init);
-math_expression::node const & lhs_most(math_expression::container_type const & array, size_t root);
+math_expression::node const & lhs_most(math_expression::container_type const & array_base, math_expression::node const & init);
+math_expression::node const & lhs_most(math_expression::container_type const & array_base, size_t root);
 
 
 }
