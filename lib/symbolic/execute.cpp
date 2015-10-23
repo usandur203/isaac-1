@@ -157,6 +157,7 @@ namespace isaac
 
     //Todo: technically the datatype should be per temporary
     numeric_type dtype = expression.dtype();
+    std::vector<std::shared_ptr<array> > temporaries_;
 
     expression_type final_type;
     //GEMM
@@ -179,7 +180,6 @@ namespace isaac
 
         /*----Parse required temporaries-----*/
         detail::parse(tree, rootidx, breakpoints, final_type);
-        std::vector<std::shared_ptr<array> > temporaries_;
 
         /*----Compute required temporaries----*/
         for(detail::breakpoints_t::iterator it = breakpoints.begin() ; it != breakpoints.end() ; ++it)
@@ -216,7 +216,7 @@ namespace isaac
           profile->execute(execution_handler(expression, c.execution_options(), c.dispatcher_options(), c.compilation_options()));
           tree[rootidx] = root_save;
 
-          //Incorporates the temporary within the math_expression
+          //Incorporates the temporary within, the math_expression
           fill(*it->second, (array&)*tmp);
         }
     }
