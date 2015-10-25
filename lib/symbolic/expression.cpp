@@ -171,14 +171,14 @@ size4 math_expression::shape() const
 { return shape_; }
 
 int_t math_expression::nshape() const
-{ return int_t((shape_[0] > 1) + (shape_[1] > 1)); }
+{ return (int_t)shape_.size(); }
 
-math_expression& math_expression::reshape(int_t size1, int_t size2)
-{
-  assert(size1*size2==prod(shape_));
-  shape_ = size4(size1, size2);
-  return *this;
-}
+//math_expression& math_expression::reshape(int_t size1, int_t size2)
+//{
+//  assert(size1*size2==prod(shape_));
+//  shape_ = size4(size1, size2);
+//  return *this;
+//}
 
 math_expression math_expression::operator-()
 { return math_expression(*this,  invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_SUB_TYPE), *context_, dtype_, shape_); }

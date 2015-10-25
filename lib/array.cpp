@@ -25,26 +25,26 @@ namespace isaac
 //1D Constructors
 
 array_base::array_base(int_t shape0, numeric_type dtype, driver::Context const & context) :
-  dtype_(dtype), shape_(shape0, 1, 1, 1), start_(0), stride_(1), ld_(shape_[0]),
+  dtype_(dtype), shape_{shape0}, start_(0), stride_(1), ld_(shape_[0]),
   context_(context), data_(context_, size_of(dtype)*dsize()),
   T(isaac::trans(*this))
 { }
 
 array_base::array_base(int_t shape0, numeric_type dtype, driver::Buffer data, int_t start, int_t inc):
-  dtype_(dtype), shape_(shape0), start_(start), stride_(inc), ld_(shape_[0]), context_(data.context()), data_(data),
+  dtype_(dtype), shape_{shape0}, start_(start), stride_(inc), ld_(shape_[0]), context_(data.context()), data_(data),
   T(isaac::trans(*this))
 { }
 
 
 template<class DT>
 array_base::array_base(std::vector<DT> const & x, driver::Context const & context):
-  dtype_(to_numeric_type<DT>::value), shape_((int_t)x.size(), 1), start_(0), stride_(1), ld_(shape_[0]),
+  dtype_(to_numeric_type<DT>::value), shape_{(int_t)x.size()}, start_(0), stride_(1), ld_(shape_[0]),
   context_(context), data_(context, size_of(dtype_)*dsize()),
   T(isaac::trans(*this))
 { *this = x; }
 
 array_base::array_base(array_base & v, slice const & s0) :
-  dtype_(v.dtype_), shape_(s0.size(v.shape_[0]), 1, 1, 1), start_(v.start_ + v.stride_*s0.start), stride_(v.stride_*s0.stride),
+  dtype_(v.dtype_), shape_{s0.size(v.shape_[0])}, start_(v.start_ + v.stride_*s0.start), stride_(v.stride_*s0.stride),
   ld_(v.ld_), context_(v.context()), data_(v.data_),
   T(isaac::trans(*this))
 {}
@@ -66,19 +66,19 @@ INSTANTIATE(double);
 
 // 2D
 array_base::array_base(int_t shape0, int_t shape1, numeric_type dtype, driver::Context const & context) :
-  dtype_(dtype), shape_(shape0, shape1), start_(0), stride_(1), ld_(shape0),
+  dtype_(dtype), shape_{shape0, shape1}, start_(0), stride_(1), ld_(shape0),
   context_(context), data_(context_, size_of(dtype_)*dsize()),
   T(isaac::trans(*this))
 {}
 
 array_base::array_base(int_t shape0, int_t shape1, numeric_type dtype, driver::Buffer data, int_t start, int_t ld) :
-  dtype_(dtype), shape_(shape0, shape1), start_(start), stride_(1),
+  dtype_(dtype), shape_{shape0, shape1}, start_(start), stride_(1),
   ld_(ld), context_(data.context()), data_(data),
   T(isaac::trans(*this))
 { }
 
 array_base::array_base(array_base & M, slice const & s0, slice const & s1) :
-  dtype_(M.dtype_), shape_(s0.size(M.shape_[0]), s1.size(M.shape_[1]), 1, 1),
+  dtype_(M.dtype_), shape_{s0.size(M.shape_[0]), s1.size(M.shape_[1])},
   start_(M.start_ + M.stride_*s0.start + s1.start*M.ld_),
   stride_(M.stride_*s0.stride),
   ld_(M.ld_*s1.stride),
@@ -90,7 +90,7 @@ array_base::array_base(array_base & M, slice const & s0, slice const & s1) :
 template<typename DT>
 array_base::array_base(int_t shape0, int_t shape1, std::vector<DT> const & data, driver::Context const & context)
   : dtype_(to_numeric_type<DT>::value),
-    shape_(shape0, shape1), start_(0), stride_(1), ld_(shape0),
+    shape_{shape0, shape1}, start_(0), stride_(1), ld_(shape0),
     context_(context), data_(context_, size_of(dtype_)*dsize()),
     T(isaac::trans(*this))
 {
@@ -99,7 +99,7 @@ array_base::array_base(int_t shape0, int_t shape1, std::vector<DT> const & data,
 
 // 3D
 array_base::array_base(int_t shape0, int_t shape1, int_t shape2, numeric_type dtype, driver::Context const & context) :
-  dtype_(dtype), shape_(shape0, shape1, shape2, 1), start_(0), stride_(1), ld_(shape0),
+  dtype_(dtype), shape_{shape0, shape1, shape2}, start_(0), stride_(1), ld_(shape0),
   context_(context), data_(context_, size_of(dtype_)*dsize()),
   T(isaac::trans(*this))
 {}
@@ -119,9 +119,13 @@ INSTANTIATE(float);
 INSTANTIATE(double);
 #undef INSTANTIATE
 
-array_base::array_base(numeric_type dtype, size4 shape, int_t start, int_t stride, int_t ld, driver::Context const & context) :
+
+array_base::array_base(numeric_type dtype, std::vector<int_t> shape, int_t start, int_t stride, int_t ld, driver::Context const & context) :
     dtype_(dtype), shape_(shape), start_(start), stride_(stride), ld_(ld), context_(context), data_(context_, size_of(dtype_)*dsize()),
     T(isaac::trans(*this))
+{}
+
+array_base::array_base(numeric_type dtype, std::vector<int_t> shape, driver::Context const & context) : array_base(dtype, shape, 0, 1, shape[0], context)
 {}
 
 array_base::array_base(math_expression const & proxy) : array_base(execution_handler(proxy)){}
@@ -136,19 +140,18 @@ array_base::array_base(execution_handler const & other) :
 }
 
 //Destructor
-array_base::~array_base(){ }
+array_base::~array_base()
+{}
 
 /*--- Getters ---*/
 numeric_type array_base::dtype() const
-{
-  return dtype_;
-}
+{ return dtype_; }
 
-size4 const & array_base::shape() const
+const std::vector<int_t> &array_base::shape() const
 { return shape_; }
 
 int_t array_base::nshape() const
-{ return int_t((shape_[0] > 1) + (shape_[1] > 1)); }
+{ return (int_t)shape_.size(); }
 
 int_t array_base::start() const
 { return start_; }
@@ -168,9 +171,13 @@ driver::Buffer const & array_base::data() const
 driver::Buffer & array_base::data()
 { return data_; }
 
-
 int_t array_base::dsize() const
-{ return ld_*shape_[1]*shape_[2]*shape_[3]; }
+{
+  int_t res = ld_;
+  for(size_t i = 1 ; i < shape_.size() ; ++i)
+    res *= shape_[i];
+  return res;
+}
 
 /*--- Assignment Operators ----*/
 //---------------------------------------
@@ -489,7 +496,7 @@ std::ostream & operator<<(std::ostream & os, scalar const & s)
 template<class U, class V>
 size4 elementwise_size(U const & u, V const & v)
 {
-  if(detail::max(u.shape())==1)
+  if(max(u.shape())==1)
     return v.shape();
   return u.shape();
 }
@@ -498,7 +505,9 @@ template<class U, class V>
 void check_elementwise(U const & u, V const & v)
 {
   auto check = [](int_t a, int_t b){ return a==b || a==1 || b==1; };
-  assert(check(u.shape()[0], v.shape()[0]) && check(u.shape()[1], v.shape()[1]));
+  assert(u.nshape() == v.nshape());
+  for(size_t i = 0 ; i < u.nshape() ; ++i)
+      assert(check(u.shape()[i], v.shape()[i]));
 }
 
 #define DEFINE_ELEMENT_BINARY_OPERATOR(OP, OPNAME, DTYPE) \
@@ -675,6 +684,7 @@ isaac::math_expression eye(int_t M, int_t N, isaac::numeric_type dtype, driver::
 
 array diag(array_base & x, int offset)
 {
+  assert(x.nshape()==2 && "Input must be 2-d");
   int_t offi = -(offset<0)*offset, offj = (offset>0)*offset;
   int_t size = std::min(x.shape()[0] - offi, x.shape()[1] - offj);
   int_t start = offi + x.ld()*offj;
@@ -686,7 +696,12 @@ isaac::math_expression zeros(int_t M, int_t N, isaac::numeric_type dtype, driver
 { return math_expression(value_scalar(0, dtype), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_ADD_TYPE), ctx, dtype, size4(M, N)); }
 
 inline size4 flip(size4 const & shape)
-{ return size4(shape[1], shape[0]);}
+{
+  size4 res = shape;
+  for(size_t i = 0 ; i < shape.size() ; ++i)
+    res[i] = res[(i + 1)%shape.size()];
+  return res;
+}
 
 inline size4 prod(size4 const & shape1, size4 const & shape2)
 { return size4(shape1[0]*shape2[0], shape1[1]*shape2[1]);}
@@ -700,14 +715,14 @@ math_expression trans(math_expression const & x) \
 math_expression repmat(array_base const & A, int_t const & rep1, int_t const & rep2)
 {
   int_t sub1 = A.shape()[0];
-  int_t sub2 = A.shape()[1];
+  int_t sub2 = A.nshape()==2?A.shape()[1]:1;
   return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), size4(rep1*sub1, rep2*sub2));
 }
 
 math_expression repmat(math_expression const & A, int_t const & rep1, int_t const & rep2)
 {
   int_t sub1 = A.shape()[0];
-  int_t sub2 = A.shape()[1];
+  int_t sub2 = A.nshape()==2?A.shape()[1]:1;
   return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), size4(rep1*sub1, rep2*sub2));
 }
 
@@ -745,11 +760,11 @@ math_expression OPNAME(array_base const & x, int_t axis)\
   if(axis < -1 || axis > x.nshape())\
     throw std::out_of_range("The axis entry is out of bounds");\
   else if(axis==-1)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4(1));\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{1});\
   else if(axis==0)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4(x.shape()[1]));\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[1]});\
   else\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4(x.shape()[0]));\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[0]});\
 }\
 \
 math_expression OPNAME(math_expression const & x, int_t axis)\
@@ -757,11 +772,11 @@ math_expression OPNAME(math_expression const & x, int_t axis)\
   if(axis < -1 || axis > x.nshape())\
     throw std::out_of_range("The axis entry is out of bounds");\
   if(axis==-1)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4(1));\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{1});\
   else if(axis==0)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4(x.shape()[1]));\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[1]});\
   else\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4(x.shape()[0]));\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[0]});\
 }
 
 DEFINE_DOT(OPERATOR_ADD_TYPE, sum)
@@ -777,14 +792,14 @@ namespace detail
 
   math_expression matmatprod(array_base const & A, array_base const & B)
   {
-    size4 shape(A.shape()[0], B.shape()[1]);
+    size4 shape{A.shape()[0], B.shape()[1]};
     return math_expression(A, B, op_element(OPERATOR_GEMM_TYPE_FAMILY, OPERATOR_GEMM_NN_TYPE), A.context(), A.dtype(), shape);
   }
 
   math_expression matmatprod(math_expression const & A, array_base const & B)
   {
     operation_node_type type = OPERATOR_GEMM_NN_TYPE;
-    size4 shape(A.shape()[0], B.shape()[1]);
+    size4 shape{A.shape()[0], B.shape()[1]};
 
     math_expression::node & A_root = const_cast<math_expression::node &>(A.tree()[A.root()]);
     bool A_trans = A_root.op.type==OPERATOR_TRANS_TYPE;
@@ -801,7 +816,7 @@ namespace detail
   math_expression matmatprod(array_base const & A, math_expression const & B)
   {
     operation_node_type type = OPERATOR_GEMM_NN_TYPE;
-    size4 shape(A.shape()[0], B.shape()[1]);
+    size4 shape{A.shape()[0], B.shape()[1]};
 
     math_expression::node & B_root = const_cast<math_expression::node &>(B.tree()[B.root()]);
     bool B_trans = B_root.op.type==OPERATOR_TRANS_TYPE;
@@ -820,7 +835,7 @@ namespace detail
     operation_node_type type = OPERATOR_GEMM_NN_TYPE;
     math_expression::node & A_root = const_cast<math_expression::node &>(A.tree()[A.root()]);
     math_expression::node & B_root = const_cast<math_expression::node &>(B.tree()[B.root()]);
-    size4 shape(A.shape()[0], B.shape()[1]);
+    size4 shape{A.shape()[0], B.shape()[1]};
 
     bool A_trans = A_root.op.type==OPERATOR_TRANS_TYPE;
     bool B_trans = B_root.op.type==OPERATOR_TRANS_TYPE;
@@ -885,7 +900,7 @@ math_expression dot(LTYPE const & x, RTYPE const & y)\
   if(x.shape()[1]==0)\
     return zeros(x.shape()[0], y.shape()[1], dtype, context);\
   if(x.shape()[0]==0 || y.shape()[1]==0)\
-    return math_expression(invalid_node(), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_INVALID_TYPE), context, dtype, size4(0,0,0,0));\
+    return math_expression(invalid_node(), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_INVALID_TYPE), context, dtype, size4());\
   if(x.nshape()<1 || y.nshape()<1){\
     return x*y;\
   }\
@@ -956,7 +971,7 @@ void copy(void const * data, array_base& x, driver::CommandQueue & queue, bool b
   }
   else
   {
-    array tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
+    array tmp(x.dtype(), x.shape(), x.context());
     queue.write(tmp.data(), blocking, 0, tmp.dsize()*dtypesize, data);
     x = tmp;
   }
@@ -971,7 +986,7 @@ void copy(array_base const & x, void* data, driver::CommandQueue & queue, bool b
   }
   else
   {
-    array tmp(x.shape()[0], x.shape()[1], x.dtype(), x.context());
+    array tmp(x.dtype(), x.shape(), x.context());
     tmp = x;
     queue.read(tmp.data(), blocking, 0, tmp.dsize()*dtypesize, data);
   }

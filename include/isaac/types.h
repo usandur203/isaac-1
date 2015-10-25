@@ -1,7 +1,8 @@
 #ifndef ISAAC_TYPES_H
 #define ISAAC_TYPES_H
 
-#include <list>
+#include <algorithm>
+#include <vector>
 #include <cstddef>
 #include "isaac/defines.h"
 
@@ -9,25 +10,10 @@ namespace isaac
 {
 
 typedef long long int_t;
+typedef std::vector<int_t> size4;
 
-struct ISAACAPI size4
-{
-  size4(int_t s0, int_t s1 = 1, int_t s2 = 1, int_t s3 = 1)
-  {
-    data_[0] = s0;
-    data_[1] = s1;
-    data_[2] = s2;
-    data_[3] = s3;
-  }
-
-  bool operator==(size4 const & other) const { return (*this)[0]==other[0] && (*this)[1]==other[1]; }
-  int_t operator[](size_t i) const { return data_[i]; }
-  int_t & operator[](size_t i) { return data_[i]; }
-private:
-  int_t data_[4];
-};
-
-inline int_t prod(size4 const & s) { return s[0]*s[1]; }
+inline int_t prod(size4 x){ return std::accumulate(x.begin(), x.end(), 1, std::multiplies<int>()); }
+inline int_t max(size4 x){ return std::accumulate(x.begin(), x.end(), -INFINITY, [](int_t a, int_t b){ return std::max(a, b); }); }
 
 static const int_t start = 0;
 static const int_t end = -1;

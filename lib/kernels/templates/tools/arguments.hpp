@@ -69,12 +69,12 @@ public:
         {
             kernel_.setArg(current_arg_++, a->data());
             //scalar
-            if(a->shape()[0]==1 && a->shape()[1]==1)
+            if(max(a->shape())==1)
             {
                 kernel_.setSizeArg(current_arg_++, a->start());
             }
             //vector
-            else if(a->shape()[0]==1 || a->shape()[1]==1)
+            else if(a->nshape()==1)
             {
                 kernel_.setSizeArg(current_arg_++, a->start());
                 kernel_.setSizeArg(current_arg_++, (a->shape()[0] > 1)?a->stride():a->ld());

@@ -236,7 +236,7 @@ private:
   std::size_t root_;
   driver::Context const * context_;
   numeric_type dtype_;
-  size4 shape_;
+  std::vector<int_t> shape_;
 };
 
 

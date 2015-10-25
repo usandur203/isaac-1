@@ -164,7 +164,7 @@ std::string axpy::generate_impl(std::string const & suffix, math_expression cons
 
   stream.dec_tab();
   stream << "}" << std::endl;
-//  std::cout << stream.str() << std::endl;
+  std::cout << stream.str() << std::endl;
 
   return stream.str();
 }
@@ -182,8 +182,7 @@ axpy::axpy(unsigned int simd, unsigned int ls, unsigned int ng,
 
 std::vector<int_t> axpy::input_sizes(math_expression const & expressions) const
 {
-  size4 shape = expressions.shape();
-  return {std::max(shape[0], shape[1])};
+  return expressions.shape();
 }
 
 void axpy::enqueue(driver::CommandQueue & queue, driver::Program const & program, std::string const & suffix, base & fallback, execution_handler const & control)

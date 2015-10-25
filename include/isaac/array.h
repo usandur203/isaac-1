@@ -36,6 +36,7 @@ public:
   array_base(int_t size1, int_t size2, int_t size3, numeric_type dtype = FLOAT_TYPE, driver::Context const & context = driver::backend::contexts::get_default());
 
   //General constructor
+  array_base(numeric_type dtype, size4 shape, driver::Context const & context);
   array_base(numeric_type dtype, size4 shape, int_t start, int_t stride, int_t ld, driver::Context const & context);
   array_base(math_expression const & proxy);
   array_base(execution_handler const &);
@@ -45,7 +46,7 @@ public:
 
   //Getters
   numeric_type dtype() const;
-  size4 const & shape() const;
+  std::vector<int_t> const & shape() const;
   int_t nshape() const;
   int_t start() const;
   int_t stride() const;
@@ -95,7 +96,8 @@ public:
 protected:
   numeric_type dtype_;
 
-  size4 shape_;
+  std::vector<int_t> shape_;
+
   int_t start_;
   int_t stride_;
   int_t ld_;

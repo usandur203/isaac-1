@@ -15,8 +15,8 @@ int main()
 {
   typedef float T;
 
-  long int M = 7;
-  long int N = 7;
+  long int M = 4;
+  long int N = 4;
 
 
   std::vector<float> tauq(M);

@@ -29,7 +29,6 @@ int main()
     std::cout << A << std::endl;
     std::cout << std::endl;
 
-    test(A({0,sc::end}, {0,sc::end}));
 //    std::cout << "A[3, 2:end]:" << std::endl;
 //    std::cout << sline << std::endl;
 //    std::cout << A(3, {2,sc::end}) << std::endl;
@@ -51,6 +50,7 @@ int main()
 //    std::cout << std::endl;
 
     using sc::_i0;
-    sc::execute(sfor(_i0 = 8, _i0 >= 0, _i0-=1, sc::assign(row(A, _i0 + 1),row(A, _i0))));
+    sc::execute(sc::assign(row(A, 1),row(A, 0)));
+//    sc::execute(sfor(_i0 = 8, _i0 >= 0, _i0-=1, sc::assign(row(A, _i0 + 1),row(A, _i0))));
     std::cout << A << std::endl;
 }
