@@ -47,7 +47,7 @@ public:
   //Getters
   numeric_type dtype() const;
   std::vector<int_t> const & shape() const;
-  int_t nshape() const;
+  int_t dim() const;
   int_t start() const;
   int_t stride() const;
   int_t const & ld() const;

@@ -222,7 +222,7 @@ public:
 
   size4 shape() const;
   math_expression& reshape(int_t size1, int_t size2=1);
-  int_t nshape() const;
+  int_t dim() const;
   container_type & tree();
   container_type const & tree() const;
   std::size_t root() const;

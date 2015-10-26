@@ -170,7 +170,7 @@ numeric_type const & math_expression::dtype() const
 size4 math_expression::shape() const
 { return shape_; }
 
-int_t math_expression::nshape() const
+int_t math_expression::dim() const
 { return (int_t)shape_.size(); }
 
 //math_expression& math_expression::reshape(int_t size1, int_t size2)

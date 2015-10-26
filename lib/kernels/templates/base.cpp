@@ -46,7 +46,7 @@ int_t base::vector_size(math_expression::node const & node)
   else if (node.op.type==OPERATOR_MATRIX_COLUMN_TYPE)
     return node.lhs.array->shape()[0];
   else
-    return std::max(node.lhs.array->shape()[0], node.lhs.array->shape()[1]);
+    return max(node.lhs.array->shape());
 
 }
 

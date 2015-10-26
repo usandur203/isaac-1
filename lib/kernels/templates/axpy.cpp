@@ -44,7 +44,7 @@ std::string axpy::generate_impl(std::string const & suffix, math_expression cons
 
 
   std::vector<size_t> assigned_scalar = filter_nodes([](math_expression::node const & node) {
-                                                        return  detail::is_assignment(node.op) && node.lhs.subtype==DENSE_ARRAY_TYPE && node.lhs.array->nshape()==0;
+                                                        return  detail::is_assignment(node.op) && node.lhs.subtype==DENSE_ARRAY_TYPE && node.lhs.array->dim()==0;
                                                         }, expressions, expressions.root(), true);
   switch(backend)
   {
@@ -164,7 +164,7 @@ std::string axpy::generate_impl(std::string const & suffix, math_expression cons
 
   stream.dec_tab();
   stream << "}" << std::endl;
-  std::cout << stream.str() << std::endl;
+//  std::cout << stream.str() << std::endl;
 
   return stream.str();
 }

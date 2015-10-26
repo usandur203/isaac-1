@@ -14,6 +14,7 @@ typedef std::vector<int_t> size4;
 
 inline int_t prod(size4 x){ return std::accumulate(x.begin(), x.end(), 1, std::multiplies<int>()); }
 inline int_t max(size4 x){ return std::accumulate(x.begin(), x.end(), -INFINITY, [](int_t a, int_t b){ return std::max(a, b); }); }
+inline int_t min(size4 x){ return std::accumulate(x.begin(), x.end(), INFINITY, [](int_t a, int_t b){ return std::min(a, b); }); }
 
 static const int_t start = 0;
 static const int_t end = -1;

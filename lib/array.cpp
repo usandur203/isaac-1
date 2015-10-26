@@ -150,7 +150,7 @@ numeric_type array_base::dtype() const
 const std::vector<int_t> &array_base::shape() const
 { return shape_; }
 
-int_t array_base::nshape() const
+int_t array_base::dim() const
 { return (int_t)shape_.size(); }
 
 int_t array_base::start() const
@@ -219,7 +219,7 @@ array_base & array_base::operator=(math_expression const & rhs)
 template<class DT>
 array_base & array_base::operator=(std::vector<DT> const & rhs)
 {
-  assert(nshape()<=1);
+  assert(dim()<=1);
   isaac::copy(rhs, *this);
   return *this;
 }
@@ -296,25 +296,25 @@ math_expression array_base::operator[](for_idx_t idx) const
 
 scalar array_base::operator [](int_t idx)
 {
-  assert(nshape()<=1);
+  assert(dim()<=1);
   return scalar(dtype_, data_, start_ + idx);
 }
 
 const scalar array_base::operator [](int_t idx) const
 {
-  assert(nshape()<=1);
+  assert(dim()<=1);
   return scalar(dtype_, data_, start_ + idx);
 }
 
 view array_base::operator[](slice const & e1)
 {
-  assert(nshape()<=1);
+  assert(dim()<=1);
   return view(*this, e1);
 }
 
 view array_base::operator()(slice const & s1, slice const & s2)
 {
-  assert(nshape()==2);
+  assert(dim()==2);
   int_t size1 = s1.size(shape_[0]);
   int_t size2 = s2.size(shape_[1]);
   if(size1==1)
@@ -505,8 +505,8 @@ template<class U, class V>
 void check_elementwise(U const & u, V const & v)
 {
   auto check = [](int_t a, int_t b){ return a==b || a==1 || b==1; };
-  assert(u.nshape() == v.nshape());
-  for(size_t i = 0 ; i < u.nshape() ; ++i)
+  assert(u.dim() == v.dim());
+  for(size_t i = 0 ; i < u.dim() ; ++i)
       assert(check(u.shape()[i], v.shape()[i]));
 }
 
@@ -586,8 +586,8 @@ DEFINE_ELEMENT_BINARY_OPERATOR(OPERATOR_ELEMENT_NEQ_TYPE, operator !=, INT_TYPE)
 #define DEFINE_OUTER(LTYPE, RTYPE) \
 math_expression outer(LTYPE const & x, RTYPE const & y)\
 {\
-    assert(x.nshape()<=1 && y.nshape()<=1);\
-    if(x.nshape()<1 || y.nshape()<1)\
+    assert(x.dim()<=1 && y.dim()<=1);\
+    if(x.dim()<1 || y.dim()<1)\
       return x*y;\
     return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_OUTER_PROD_TYPE), x.context(), x.dtype(), size4(detail::max(x.shape()), detail::max(y.shape())) );\
 }\
@@ -684,7 +684,7 @@ isaac::math_expression eye(int_t M, int_t N, isaac::numeric_type dtype, driver::
 
 array diag(array_base & x, int offset)
 {
-  assert(x.nshape()==2 && "Input must be 2-d");
+  assert(x.dim()==2 && "Input must be 2-d");
   int_t offi = -(offset<0)*offset, offj = (offset>0)*offset;
   int_t size = std::min(x.shape()[0] - offi, x.shape()[1] - offj);
   int_t start = offi + x.ld()*offj;
@@ -715,14 +715,14 @@ math_expression trans(math_expression const & x) \
 math_expression repmat(array_base const & A, int_t const & rep1, int_t const & rep2)
 {
   int_t sub1 = A.shape()[0];
-  int_t sub2 = A.nshape()==2?A.shape()[1]:1;
+  int_t sub2 = A.dim()==2?A.shape()[1]:1;
   return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), size4(rep1*sub1, rep2*sub2));
 }
 
 math_expression repmat(math_expression const & A, int_t const & rep1, int_t const & rep2)
 {
   int_t sub1 = A.shape()[0];
-  int_t sub2 = A.nshape()==2?A.shape()[1]:1;
+  int_t sub2 = A.dim()==2?A.shape()[1]:1;
   return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), size4(rep1*sub1, rep2*sub2));
 }
 
@@ -757,7 +757,7 @@ DEFINE_ACCESS_COL(math_expression, math_expression)
 #define DEFINE_DOT(OP, OPNAME)\
 math_expression OPNAME(array_base const & x, int_t axis)\
 {\
-  if(axis < -1 || axis > x.nshape())\
+  if(axis < -1 || axis > x.dim())\
     throw std::out_of_range("The axis entry is out of bounds");\
   else if(axis==-1)\
     return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{1});\
@@ -769,7 +769,7 @@ math_expression OPNAME(array_base const & x, int_t axis)\
 \
 math_expression OPNAME(math_expression const & x, int_t axis)\
 {\
-  if(axis < -1 || axis > x.nshape())\
+  if(axis < -1 || axis > x.dim())\
     throw std::out_of_range("The axis entry is out of bounds");\
   if(axis==-1)\
     return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{1});\
@@ -901,10 +901,10 @@ math_expression dot(LTYPE const & x, RTYPE const & y)\
     return zeros(x.shape()[0], y.shape()[1], dtype, context);\
   if(x.shape()[0]==0 || y.shape()[1]==0)\
     return math_expression(invalid_node(), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_INVALID_TYPE), context, dtype, size4());\
-  if(x.nshape()<1 || y.nshape()<1){\
+  if(x.dim()<1 || y.dim()<1){\
     return x*y;\
   }\
-  if(x.nshape()==1 && y.nshape()==1){\
+  if(x.dim()==1 && y.dim()==1){\
     if(x.shape()[1]==1 && y.shape()[0]==1)\
         return outer(x, y);\
     else if(x.shape()[0]==1 && y.shape()[1]==1)\
@@ -912,11 +912,11 @@ math_expression dot(LTYPE const & x, RTYPE const & y)\
     else\
         return sum(x*y);\
   }\
-  else if(x.nshape()==2 && y.nshape()==1)\
+  else if(x.dim()==2 && y.dim()==1)\
     return detail::matvecprod(x, y);\
-  else if(x.nshape()==1 && y.nshape()==2)\
+  else if(x.dim()==1 && y.dim()==2)\
     return trans(detail::matvecprod(trans(y), trans(x)));\
-  else /*if(x.nshape()==2 && y.nshape()==2)*/\
+  else /*if(x.dim()==2 && y.dim()==2)*/\
     return detail::matmatprod(x, y);\
 }
 
@@ -998,7 +998,9 @@ void copy(void const *data, array_base &x, bool blocking)
 }
 
 void copy(array_base const & x, void* data, bool blocking)
-{ copy(x, data, driver::backend::queues::get(x.context(), 0), blocking); }
+{
+    copy(x, data, driver::backend::queues::get(x.context(), 0), blocking);
+}
 
 //std::vector<>
 template<class T>
@@ -1023,11 +1025,15 @@ void copy(array_base const & x, std::vector<T> & cx, driver::CommandQueue & queu
 
 template<class T>
 void copy(std::vector<T> const & cx, array_base & x, bool blocking)
-{ copy(cx, x, driver::backend::queues::get(x.context(), 0), blocking); }
+{
+    copy(cx, x, driver::backend::queues::get(x.context(), 0), blocking);
+}
 
 template<class T>
 void copy(array_base const & x, std::vector<T> & cx, bool blocking)
-{ copy(x, cx, driver::backend::queues::get(x.context(), 0), blocking); }
+{
+    copy(x, cx, driver::backend::queues::get(x.context(), 0), blocking);
+}
 
 #define INSTANTIATE(T) \
   template void ISAACAPI  copy<T>(std::vector<T> const &, array_base &, driver::CommandQueue&, bool);\

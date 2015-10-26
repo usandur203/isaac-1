@@ -422,7 +422,7 @@ void math_expression_representation_functor::append(lhs_rhs_element const & lhs_
       char prefix;
       if(max(lhs_rhs.array->shape())==1)
         prefix = '0';
-      else if(lhs_rhs.array->nshape()==1)
+      else if(lhs_rhs.array->dim()==1)
         prefix = '1';
       else
         prefix = '2';

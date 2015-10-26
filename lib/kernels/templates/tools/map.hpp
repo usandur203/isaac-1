@@ -40,7 +40,7 @@ class map_functor : public traversal_functor
     if(max(a->shape())==1)
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 's'));
     //Vector
-    else if(a->nshape()==1){
+    else if(a->dim()==1){
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 'c'));
     }
     //Matrix

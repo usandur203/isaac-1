@@ -35,7 +35,7 @@ void test_impl(T epsilon,  simple_vector_base<T> & cx, simple_vector_base<T> & c
   GPU_REDUCTION;\
   queue.synchronize();\
   tmp = ds;\
-  if((std::abs(cs - tmp)/std::max(cs, tmp)) > epsilon)\
+  if(std::isnan((T)tmp) || (std::abs(cs - tmp)/std::max(cs, tmp)) > epsilon)\
   {\
     failure_count++;\
     cout << " [Failure!]" << endl;\
