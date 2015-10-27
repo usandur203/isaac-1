@@ -22,8 +22,8 @@ enum interface_t
 
 #define CHANDLE(X) X.data().handle().cl()
 #define OFF(X) X.start()
-#define INC(X) X.stride()
-#define LD(X) X.ld()
+#define INC(X) X.stride()[0]
+#define LD(X) X.stride()[1]
 
 /*------ Simple Vector ---------*/
 template<class T>

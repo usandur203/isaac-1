@@ -15,8 +15,8 @@ int main()
 {
   typedef float T;
 
-  long int M = 4;
-  long int N = 4;
+  long int M = 5;
+  long int N = 5;
 
 
   std::vector<float> tauq(M);
@@ -57,18 +57,18 @@ int main()
   lwork = work[0];
   work.resize(lwork);
   sgebrd_(&M, &N, ptr(cA.data()), &lda, ptr(d), ptr(e), ptr(tauq), ptr(taup), ptr(work), &lwork, &info);
-//  std::cout << std::endl;
-//  std::cout << "d: "; std::copy(d.begin(), d.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-//  std::cout << "e: "; std::copy(e.begin(), e.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-//  std::cout << "tauq: "; std::copy(tauq.begin(), tauq.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-//  std::cout << "taup: "; std::copy(taup.begin(), taup.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
-//  sorgbr_("P", &M, &N, &M, ptr(cA.data()), &lda, ptr(taup), ptr(work), &lwork, &info);
-//  for(unsigned int i = 0 ; i < M ; ++i)
-//  {
-//    for(unsigned int j = 0 ; j < N ; ++j)
-//      std::cout << cA(i, j) << " ";
-//    std::cout << std::endl;
-//  }
+  std::cout << std::endl;
+  std::cout << "d: "; std::copy(d.begin(), d.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+  std::cout << "e: "; std::copy(e.begin(), e.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+  std::cout << "tauq: "; std::copy(tauq.begin(), tauq.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+  std::cout << "taup: "; std::copy(taup.begin(), taup.end(), std::ostream_iterator<float>(std::cout, " ")); std::cout << std::endl;
+  sorgbr_("P", &M, &N, &M, ptr(cA.data()), &lda, ptr(taup), ptr(work), &lwork, &info);
+  for(unsigned int i = 0 ; i < M ; ++i)
+  {
+    for(unsigned int j = 0 ; j < N ; ++j)
+      std::cout << cA(i, j) << " ";
+    std::cout << std::endl;
+  }
 
 //  using sc::_i0;
 //  char side = 'R';

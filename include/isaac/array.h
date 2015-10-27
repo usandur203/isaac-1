@@ -16,6 +16,8 @@ class view;
 
 class ISAACAPI array_base
 {
+private:
+  int_t dsize();
 public:
   //1D Constructors
   explicit array_base(int_t size1, numeric_type dtype = FLOAT_TYPE, driver::Context const & context = driver::backend::contexts::get_default());
@@ -37,9 +39,8 @@ public:
 
   //General constructor
   array_base(numeric_type dtype, shape_t const & shape, driver::Context const & context);
-  array_base(numeric_type dtype, shape_t const & shape, int_t start, int_t stride, int_t ld, driver::Context const & context);
-  array_base(math_expression const & proxy);
-  array_base(execution_handler const &);
+  array_base(numeric_type dtype, shape_t const & shape, int_t start, shape_t const & stride, driver::Context const & context);
+  explicit array_base(execution_handler const &);
 
   //Make the class virtual
   virtual ~array_base() = 0;
@@ -49,12 +50,10 @@ public:
   shape_t const & shape() const;
   int_t dim() const;
   int_t start() const;
-  int_t stride() const;
-  int_t const & ld() const;
+  shape_t const & stride() const;
   driver::Context const & context() const;
   driver::Buffer const & data() const;
   driver::Buffer & data();
-  int_t dsize() const;
 
   //Setters
   array_base& resize(int_t size1, int_t size2=1);
@@ -90,6 +89,9 @@ public:
   view operator[](slice const &);
 
   //Indexing (2D)
+  view operator()(int_t, int_t);
+  view operator()(slice const &, int_t);
+  view operator()(int_t, slice const &);
   view operator()(slice const &, slice const &);
 
 
@@ -97,10 +99,8 @@ protected:
   numeric_type dtype_;
 
   shape_t shape_;
-
   int_t start_;
-  int_t stride_;
-  int_t ld_;
+  shape_t stride_;
 
   driver::Context context_;
   driver::Buffer data_;
@@ -114,7 +114,9 @@ class ISAACAPI array : public array_base
 public:
   using array_base::array_base;
   //Copy Constructor
+  array(array_base const &);
   array(array const &);
+  array(math_expression const & proxy);
   using array_base::operator=;
 };
 
@@ -304,7 +306,8 @@ ISAACAPI math_expression eye(int_t, int_t, isaac::numeric_type, driver::Context 
 ISAACAPI math_expression zeros(int_t M, int_t N, numeric_type dtype, driver::Context const & context = driver::backend::contexts::get_default());
 
 //Reshape
-ISAACAPI math_expression reshape(array_base const &, int_t, int_t);
+ISAACAPI math_expression reshape(array_base const &, shape_t const &);
+ISAACAPI math_expression ravel(array_base const &);
 
 //diag
 array diag(array_base & x, int offset = 0);
@@ -330,6 +333,7 @@ ISAACAPI math_expression col(math_expression const &, math_expression const &);
 
 //
 ISAACAPI std::ostream& operator<<(std::ostream &, array_base const &);
+ISAACAPI std::ostream& operator<<(std::ostream &, math_expression const &);
 
 }
 #endif

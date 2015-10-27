@@ -29,6 +29,14 @@ int main()
     std::cout << A << std::endl;
     std::cout << std::endl;
 
+    sc::view x = A({1,2},sc::all);
+    sc::view y = A(sc::all, {1,2});
+
+    sc::array xx = x;
+
+    std::cout << "before" << std::endl;
+    A(0,0) = (float)3.13;
+    std::cout << A << std::endl;
 //    std::cout << "A[3, 2:end]:" << std::endl;
 //    std::cout << sline << std::endl;
 //    std::cout << A(3, {2,sc::end}) << std::endl;
@@ -49,8 +57,7 @@ int main()
 //    std::cout << sc::diag(A, -7) << std::endl;
 //    std::cout << std::endl;
 
-    using sc::_i0;
-    sc::execute(sc::assign(row(A, 1),row(A, 0)));
+//    using sc::_i0;
 //    sc::execute(sfor(_i0 = 8, _i0 >= 0, _i0-=1, sc::assign(row(A, _i0 + 1),row(A, _i0))));
-    std::cout << A << std::endl;
+//    std::cout << A << std::endl;
 }

@@ -82,8 +82,8 @@ namespace isaac
                 if(left == GEMV_N_TYPE || right == GEMV_N_TYPE) return GEMV_N_TYPE;
                 else if(left == GEMV_T_TYPE || right == GEMV_T_TYPE) return GEMV_T_TYPE;
                 else if(left == DOT_TYPE || right == DOT_TYPE) return DOT_TYPE;
-                else if(left == AXPY_TYPE || right == AXPY_TYPE) return op.type==OPERATOR_OUTER_PROD_TYPE?GER_TYPE:AXPY_TYPE;
                 else if(left == GER_TYPE || right == GER_TYPE) return GER_TYPE;
+                else if(left == AXPY_TYPE || right == AXPY_TYPE) return op.type==OPERATOR_OUTER_PROD_TYPE?GER_TYPE:AXPY_TYPE;
                 else if(is_mmprod(left) || is_mmprod(right)) return GER_TYPE;
                 else if(right == INVALID_EXPRESSION_TYPE) return left;
                 else if(left == INVALID_EXPRESSION_TYPE) return right;
@@ -172,7 +172,7 @@ namespace isaac
 
         //Init
         expression_type current_type;
-        if(expression.dim()<=1)
+        if(expression.dim()==1)
           current_type=AXPY_TYPE;
         else
           current_type=GER_TYPE;

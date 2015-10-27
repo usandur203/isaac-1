@@ -603,20 +603,20 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     gemm.setSizeArg(current_arg++, N);
     gemm.setSizeArg(current_arg++, K);
     gemm.setArg(current_arg++, out->data());
-    gemm.setSizeArg(current_arg++, out->ld());
+    gemm.setSizeArg(current_arg++, out->stride()[1]);
     gemm.setSizeArg(current_arg++, out->start());
-    gemm.setSizeArg(current_arg++, out->stride());
+    gemm.setSizeArg(current_arg++, out->stride()[0]);
 
     helper.set_arguments(alpha.dtype(), alpha.values());
     gemm.setArg(current_arg++, A.data());
-    gemm.setSizeArg(current_arg++, A.ld());
+    gemm.setSizeArg(current_arg++, A.stride()[1]);
     gemm.setSizeArg(current_arg++, A.start());
-    gemm.setSizeArg(current_arg++, A.stride());
+    gemm.setSizeArg(current_arg++, A.stride()[0]);
 
     gemm.setArg(current_arg++, B.data());
-    gemm.setSizeArg(current_arg++, B.ld());
+    gemm.setSizeArg(current_arg++, B.stride()[1]);
     gemm.setSizeArg(current_arg++, B.start());
-    gemm.setSizeArg(current_arg++, B.stride());
+    gemm.setSizeArg(current_arg++, B.stride()[0]);
 
     helper.set_arguments(beta.dtype(), beta.values());
     options.enqueue(program.context(), gemm, global, local);
@@ -632,11 +632,11 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
       reduce.setSizeArg(current_arg++, N);
       reduce.setSizeArg(current_arg++, p_.depth);
       reduce.setArg(current_arg++, out->data());
-      reduce.setSizeArg(current_arg++, out->ld());
+      reduce.setSizeArg(current_arg++, out->stride()[1]);
       reduce.setArg(current_arg++, C.data());
-      reduce.setSizeArg(current_arg++, C.ld());
+      reduce.setSizeArg(current_arg++, C.stride()[1]);
       reduce.setSizeArg(current_arg++, C.start());
-      reduce.setSizeArg(current_arg++, C.stride());
+      reduce.setSizeArg(current_arg++, C.stride()[0]);
       helper.set_arguments(beta.dtype(), beta.values());
       options.enqueue(program.context(), reduce, global, local);
     }
@@ -693,9 +693,9 @@ gemm_parameters::gemm_parameters(unsigned int simd_width
     array_base * pC = args.C->array;
 
     //Check if requires fallback
-    int_t ldstrideA = pA->stride();
-    int_t ldstrideB = pB->stride();
-    int_t ldstrideC = pC->stride();
+    int_t ldstrideA = pA->stride()[1];
+    int_t ldstrideB = pB->stride()[1];
+    int_t ldstrideC = pC->stride()[1];
 
     //Enqueue
     execution_options_type const & options = control.execution_options();

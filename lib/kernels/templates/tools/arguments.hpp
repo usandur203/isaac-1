@@ -19,10 +19,13 @@ inline std::string generate_arguments(std::string const &, driver::Device const 
 
     kernel_generation_stream stream;
 
-    process(stream, PARENT_NODE_TYPE, { {"array0", kwglobal + " #scalartype* #pointer, " + _size_t + " #start,"},
+    process(stream, PARENT_NODE_TYPE, {  {"array11", kwglobal + " #scalartype* #pointer, " + _size_t + " #start,"},
+                                         {"array1", kwglobal + " #scalartype* #pointer, " + _size_t + " #start,"},
                                         {"host_scalar", "#scalartype #name,"},
-                                        {"array1", kwglobal + " #scalartype* #pointer, " + _size_t + " #start, " + _size_t + " #stride,"},
-                                        {"array2", kwglobal + " #scalartype* #pointer, " + _size_t + " #ld, " + _size_t + " #start, " + _size_t + " #stride, "},
+                                        {"arrayn", kwglobal + " #scalartype* #pointer, " + _size_t + " #start, " + _size_t + " #stride,"},
+                                        {"array1n", kwglobal + " #scalartype* #pointer, " + _size_t + " #start, " + _size_t + " #stride,"},
+                                        {"arrayn1", kwglobal + " #scalartype* #pointer, " + _size_t + " #start, " + _size_t + " #stride,"},
+                                        {"arraynn", kwglobal + " #scalartype* #pointer, " + _size_t + " #start, " + _size_t + " #stride," +  _size_t + " #ld,"},
                                         {"tuple4", "#scalartype #name0, #scalartype #name1, #scalartype #name2, #scalartype #name3,"}}
             , expressions, mappings);
 
@@ -68,24 +71,10 @@ public:
         if (is_bound)
         {
             kernel_.setArg(current_arg_++, a->data());
-            //scalar
-            if(a->shape().max()==1)
-            {
-                kernel_.setSizeArg(current_arg_++, a->start());
-            }
-            //vector
-            else if(a->dim()==1)
-            {
-                kernel_.setSizeArg(current_arg_++, a->start());
-                kernel_.setSizeArg(current_arg_++, (a->shape()[0] > 1)?a->stride():a->ld());
-            }
-            //matrix
-            else
-            {
-                kernel_.setSizeArg(current_arg_++, a->ld());
-                kernel_.setSizeArg(current_arg_++, a->start());
-                kernel_.setSizeArg(current_arg_++, a->stride());
-            }
+            kernel_.setSizeArg(current_arg_++, a->start());
+            for(int_t i = 0 ; i < a->dim() ; i++)
+              if(a->shape()[i] > 1)
+                kernel_.setSizeArg(current_arg_++, a->stride()[i]);
         }
     }
 
