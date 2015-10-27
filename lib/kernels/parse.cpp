@@ -420,7 +420,7 @@ void math_expression_representation_functor::append(lhs_rhs_element const & lhs_
   if(lhs_rhs.subtype==DENSE_ARRAY_TYPE)
   {
       char prefix;
-      if(max(lhs_rhs.array->shape())==1)
+      if(lhs_rhs.array->shape().max()==1)
         prefix = '0';
       else if(lhs_rhs.array->dim()==1)
         prefix = '1';

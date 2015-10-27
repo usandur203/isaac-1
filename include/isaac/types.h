@@ -10,11 +10,24 @@ namespace isaac
 {
 
 typedef long long int_t;
-typedef std::vector<int_t> size4;
 
-inline int_t prod(size4 x){ return std::accumulate(x.begin(), x.end(), 1, std::multiplies<int>()); }
-inline int_t max(size4 x){ return std::accumulate(x.begin(), x.end(), -INFINITY, [](int_t a, int_t b){ return std::max(a, b); }); }
-inline int_t min(size4 x){ return std::accumulate(x.begin(), x.end(), INFINITY, [](int_t a, int_t b){ return std::min(a, b); }); }
+class shape_t
+{
+public:
+    shape_t(std::initializer_list<int_t> const & list) : data_(list){}
+    shape_t(int_t a) : data_{a} {}
+    shape_t(int_t a, int_t b) : data_{a, b} {}
+
+    size_t size() const { return data_.size(); }
+    int_t max() const   { return std::accumulate(data_.begin(), data_.end(), -INFINITY, [](int_t a, int_t b){ return std::max(a, b); }); }
+    int_t min() const   { return std::accumulate(data_.begin(), data_.end(), INFINITY, [](int_t a, int_t b){ return std::min(a, b); }); }
+    int_t prod() const  { return std::accumulate(data_.begin(), data_.end(), 1, std::multiplies<int>()); }
+
+    int_t& operator[](size_t i) { return data_[i]; }
+    int_t operator[](size_t i) const { return data_[i]; }
+private:
+    std::vector<int_t> data_;
+};
 
 static const int_t start = 0;
 static const int_t end = -1;

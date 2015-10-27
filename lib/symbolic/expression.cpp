@@ -84,7 +84,7 @@ math_expression::math_expression(value_scalar const &lhs, for_idx_t const &rhs, 
 //math_expression(for_idx_t const &lhs, value_scalar const &rhs, const op_element &op, const numeric_type &dtype);
 
 template<class LT, class RT>
-math_expression::math_expression(LT const & lhs, RT const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, size4 const & shape) :
+math_expression::math_expression(LT const & lhs, RT const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, shape_t const & shape) :
   tree_(1), root_(0), context_(&context), dtype_(dtype), shape_(shape)
 {
   fill(tree_[0].lhs, lhs);
@@ -93,7 +93,7 @@ math_expression::math_expression(LT const & lhs, RT const & rhs, op_element cons
 }
 
 template<class RT>
-math_expression::math_expression(math_expression const & lhs, RT const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, size4 const & shape) :
+math_expression::math_expression(math_expression const & lhs, RT const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, shape_t const & shape) :
  tree_(lhs.tree_.size() + 1), root_(tree_.size()-1), context_(&context), dtype_(dtype), shape_(shape)
 {
   std::copy(lhs.tree_.begin(), lhs.tree_.end(), tree_.begin());
@@ -103,7 +103,7 @@ math_expression::math_expression(math_expression const & lhs, RT const & rhs, op
 }
 
 template<class LT>
-math_expression::math_expression(LT const & lhs, math_expression const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, size4 const & shape) :
+math_expression::math_expression(LT const & lhs, math_expression const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, shape_t const & shape) :
   tree_(rhs.tree_.size() + 1), root_(tree_.size() - 1), context_(&context), dtype_(dtype), shape_(shape)
 {
   std::copy(rhs.tree_.begin(), rhs.tree_.end(), tree_.begin());
@@ -112,7 +112,7 @@ math_expression::math_expression(LT const & lhs, math_expression const & rhs, op
   fill(tree_[root_].rhs, rhs.root_);
 }
 
-math_expression::math_expression(math_expression const & lhs, math_expression const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, size4 const & shape):
+math_expression::math_expression(math_expression const & lhs, math_expression const & rhs, op_element const & op, driver::Context const & context, numeric_type const & dtype, shape_t const & shape):
   tree_(lhs.tree_.size() + rhs.tree_.size() + 1), root_(tree_.size()-1), context_(&context), dtype_(dtype), shape_(shape)
 {  
   std::size_t lsize = lhs.tree_.size();
@@ -128,29 +128,29 @@ math_expression::math_expression(math_expression const & lhs, math_expression co
   root_ = tree_.size() - 1;
 }
 
-template math_expression::math_expression(math_expression const &, value_scalar const &, op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(math_expression const &, invalid_node const &, op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(math_expression const &, array_base const &,        op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(math_expression const &, for_idx_t const &,        op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
+template math_expression::math_expression(math_expression const &, value_scalar const &, op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(math_expression const &, invalid_node const &, op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(math_expression const &, array_base const &,        op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(math_expression const &, for_idx_t const &,        op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
 
-template math_expression::math_expression(value_scalar const &, value_scalar const &,        op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(value_scalar const &, invalid_node const &,        op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(value_scalar const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(value_scalar const &, math_expression const &, op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
+template math_expression::math_expression(value_scalar const &, value_scalar const &,        op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(value_scalar const &, invalid_node const &,        op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(value_scalar const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(value_scalar const &, math_expression const &, op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
 
-template math_expression::math_expression(invalid_node const &, value_scalar const &, op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(invalid_node const &, math_expression const &, op_element const &,  driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(invalid_node const &, invalid_node const &, op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(invalid_node const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, size4 const &);
+template math_expression::math_expression(invalid_node const &, value_scalar const &, op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(invalid_node const &, math_expression const &, op_element const &,  driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(invalid_node const &, invalid_node const &, op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(invalid_node const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
 
-template math_expression::math_expression(array_base const &, math_expression const &, op_element const &,         driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(array_base const &, value_scalar const &, op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(array_base const &, invalid_node const &, op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(array_base const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(array_base const &, for_idx_t const &, op_element const &,         driver::Context const &, numeric_type const &, size4 const &);
+template math_expression::math_expression(array_base const &, math_expression const &, op_element const &,         driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(array_base const &, value_scalar const &, op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(array_base const &, invalid_node const &, op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(array_base const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(array_base const &, for_idx_t const &, op_element const &,         driver::Context const &, numeric_type const &, shape_t const &);
 
-template math_expression::math_expression(for_idx_t const &, math_expression const &, op_element const &,         driver::Context const &, numeric_type const &, size4 const &);
-template math_expression::math_expression(for_idx_t const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, size4 const &);
+template math_expression::math_expression(for_idx_t const &, math_expression const &, op_element const &,         driver::Context const &, numeric_type const &, shape_t const &);
+template math_expression::math_expression(for_idx_t const &, array_base const &,        op_element const &, driver::Context const &, numeric_type const &, shape_t const &);
 
 math_expression::container_type & math_expression::tree()
 { return tree_; }
@@ -167,7 +167,7 @@ driver::Context const & math_expression::context() const
 numeric_type const & math_expression::dtype() const
 { return dtype_; }
 
-size4 math_expression::shape() const
+shape_t math_expression::shape() const
 { return shape_; }
 
 int_t math_expression::dim() const

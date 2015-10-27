@@ -52,31 +52,53 @@ namespace isaac
         A(i__, i) -= dot(X(i__, __i), A(__i, i));
         //Householder A[i:, i]
         d[i] = (float)A(i,i)[0];
+        std::cout << 1 << std::endl;
         larfg(A(ip1__, i), &tauq[i], &d[i]);
         A(i, i) = (float)1;
+        std::cout << 2 << std::endl;
         if(i < N - 1)
         {
             //Compute Y[i+1:,i]
+            std::cout << 3 << std::endl;
+
             Y(ip1__, i)   = dot(A(i__, ip1__).T, A(i__, i));
             Y(__i, i)     = dot(A(i__, __i)  .T, A(i__, i));
             Y(ip1__, i)  -= dot(Y(ip1__, __i)    , Y(__i, i));
             Y(__i, i)     = dot(X(i__, __i)  .T, A(i__, i));
             Y(ip1__, i)  -= dot(A(__i, ip1__).T, Y(__i, i));
             Y(ip1__, i)  *= tauq[i];
+
+            std::cout << 4 << std::endl;
             //Update A[i,i+1:]
             A(i, ip1__)  -= dot(Y(ip1__, __ip1), A(i, __ip1));
             A(i, ip1__)  -= dot(A(__i, ip1__).T, X(i, __i));
+
+            std::cout << 5 << std::endl;
             //Householder of A[i, i+1:]
             e[i] = (float)A(i,i+1)[0];
             larfg(A(i, ip2__), &taup[i], &e[i]);
             A(i, i+1)     = (float)1;
+
+            std::cout << 6 << std::endl;
             //Compute X[i+1:, i]
             X(ip1__, i)   = dot(A(ip1__, ip1__)  , A(i, ip1__));
+            std::cout << 7 << std::endl;
+
             X(__ip1, i)   = dot(Y(ip1__, __ip1).T, A(i, ip1__));
+            std::cout << 8 << std::endl;
+
             X(ip1__, i)  -= dot(A(ip1__, __ip1)  , X(__ip1, i));
+            std::cout << 9 << std::endl;
+
             X(__i,   i)   = dot(A(__i, ip1__)    , A(i, ip1__));
+            std::cout << 10 << std::endl;
+
             X(ip1__, i)  -= dot(X(ip1__,__i)     , X(__i, i));
+            std::cout << 11 << std::endl;
+
             X(ip1__, i)  *= taup[i];
+            std::cout << 12 << std::endl;
+
         }
 
     }

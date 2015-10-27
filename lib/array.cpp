@@ -16,8 +16,8 @@ namespace isaac
 
   namespace detail
   {
-    inline int_t max(size4 const & s) { return std::max(s[0], s[1]); }
-    inline int_t min(size4 const & s) { return std::min(s[0], s[1]); }
+    inline int_t max(shape_t const & s) { return std::max(s[0], s[1]); }
+    inline int_t min(shape_t const & s) { return std::min(s[0], s[1]); }
 
   }
 
@@ -120,12 +120,12 @@ INSTANTIATE(double);
 #undef INSTANTIATE
 
 
-array_base::array_base(numeric_type dtype, std::vector<int_t> shape, int_t start, int_t stride, int_t ld, driver::Context const & context) :
+array_base::array_base(numeric_type dtype, shape_t const & shape, int_t start, int_t stride, int_t ld, driver::Context const & context) :
     dtype_(dtype), shape_(shape), start_(start), stride_(stride), ld_(ld), context_(context), data_(context_, size_of(dtype_)*dsize()),
     T(isaac::trans(*this))
 {}
 
-array_base::array_base(numeric_type dtype, std::vector<int_t> shape, driver::Context const & context) : array_base(dtype, shape, 0, 1, shape[0], context)
+array_base::array_base(numeric_type dtype, shape_t const & shape, driver::Context const & context) : array_base(dtype, shape, 0, 1, shape[0], context)
 {}
 
 array_base::array_base(math_expression const & proxy) : array_base(execution_handler(proxy)){}
@@ -147,7 +147,7 @@ array_base::~array_base()
 numeric_type array_base::dtype() const
 { return dtype_; }
 
-const std::vector<int_t> &array_base::shape() const
+shape_t const & array_base::shape() const
 { return shape_; }
 
 int_t array_base::dim() const
@@ -494,9 +494,9 @@ std::ostream & operator<<(std::ostream & os, scalar const & s)
 /*--- Binary Operators ----*/
 //-----------------------------------
 template<class U, class V>
-size4 elementwise_size(U const & u, V const & v)
+shape_t elementwise_size(U const & u, V const & v)
 {
-  if(max(u.shape())==1)
+  if(u.shape().max()==1)
     return v.shape();
   return u.shape();
 }
@@ -506,8 +506,9 @@ void check_elementwise(U const & u, V const & v)
 {
   auto check = [](int_t a, int_t b){ return a==b || a==1 || b==1; };
   assert(u.dim() == v.dim());
-  for(size_t i = 0 ; i < u.dim() ; ++i)
+  for(size_t i = 0 ; i < u.dim() ; ++i){
       assert(check(u.shape()[i], v.shape()[i]));
+  }
 }
 
 #define DEFINE_ELEMENT_BINARY_OPERATOR(OP, OPNAME, DTYPE) \
@@ -589,7 +590,7 @@ math_expression outer(LTYPE const & x, RTYPE const & y)\
     assert(x.dim()<=1 && y.dim()<=1);\
     if(x.dim()<1 || y.dim()<1)\
       return x*y;\
-    return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_OUTER_PROD_TYPE), x.context(), x.dtype(), size4(detail::max(x.shape()), detail::max(y.shape())) );\
+    return math_expression(x, y, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_OUTER_PROD_TYPE), x.context(), x.dtype(), {detail::max(x.shape()), detail::max(y.shape())} );\
 }\
 
 DEFINE_OUTER(array_base, array_base)
@@ -680,7 +681,7 @@ math_expression cast(math_expression const & x, numeric_type dtype)
 { return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, casted(dtype)), x.context(), dtype, x.shape()); }
 
 isaac::math_expression eye(int_t M, int_t N, isaac::numeric_type dtype, driver::Context const & ctx)
-{ return math_expression(value_scalar(1), value_scalar(0), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_VDIAG_TYPE), ctx, dtype, size4(M, N)); }
+{ return math_expression(value_scalar(1), value_scalar(0), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_VDIAG_TYPE), ctx, dtype, {M, N}); }
 
 array diag(array_base & x, int offset)
 {
@@ -693,18 +694,18 @@ array diag(array_base & x, int offset)
 
 
 isaac::math_expression zeros(int_t M, int_t N, isaac::numeric_type dtype, driver::Context  const & ctx)
-{ return math_expression(value_scalar(0, dtype), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_ADD_TYPE), ctx, dtype, size4(M, N)); }
+{ return math_expression(value_scalar(0, dtype), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_ADD_TYPE), ctx, dtype, {M, N}); }
 
-inline size4 flip(size4 const & shape)
+inline shape_t flip(shape_t const & shape)
 {
-  size4 res = shape;
+  shape_t res = shape;
   for(size_t i = 0 ; i < shape.size() ; ++i)
-    res[i] = res[(i + 1)%shape.size()];
+    res[i] = shape[(i + 1)%shape.size()];
   return res;
 }
 
-inline size4 prod(size4 const & shape1, size4 const & shape2)
-{ return size4(shape1[0]*shape2[0], shape1[1]*shape2[1]);}
+//inline size4 prod(size4 const & shape1, size4 const & shape2)
+//{ return size4(shape1[0]*shape2[0], shape1[1]*shape2[1]);}
 
 math_expression trans(array_base  const & x) \
 { return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_TRANS_TYPE), x.context(), x.dtype(), flip(x.shape())); }\
@@ -716,19 +717,19 @@ math_expression repmat(array_base const & A, int_t const & rep1, int_t const & r
 {
   int_t sub1 = A.shape()[0];
   int_t sub2 = A.dim()==2?A.shape()[1]:1;
-  return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), size4(rep1*sub1, rep2*sub2));
+  return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), {rep1*sub1, rep2*sub2});
 }
 
 math_expression repmat(math_expression const & A, int_t const & rep1, int_t const & rep2)
 {
   int_t sub1 = A.shape()[0];
   int_t sub2 = A.dim()==2?A.shape()[1]:1;
-  return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), size4(rep1*sub1, rep2*sub2));
+  return math_expression(A, make_tuple(A.context(), rep1, rep2, sub1, sub2), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_REPEAT_TYPE), A.context(), A.dtype(), {rep1*sub1, rep2*sub2});
 }
 
 #define DEFINE_ACCESS_ROW(TYPEA, TYPEB) \
   math_expression row(TYPEA const & x, TYPEB const & i)\
-  { return math_expression(x, i, op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_MATRIX_ROW_TYPE), x.context(), x.dtype(), size4(x.shape()[1], 1)); }
+  { return math_expression(x, i, op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_MATRIX_ROW_TYPE), x.context(), x.dtype(), {x.shape()[1]}); }
 
 DEFINE_ACCESS_ROW(array_base, value_scalar)
 DEFINE_ACCESS_ROW(array_base, for_idx_t)
@@ -740,7 +741,7 @@ DEFINE_ACCESS_ROW(math_expression, math_expression)
 
 #define DEFINE_ACCESS_COL(TYPEA, TYPEB) \
   math_expression col(TYPEA const & x, TYPEB const & i)\
-  { return math_expression(x, i, op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_MATRIX_COLUMN_TYPE), x.context(), x.dtype(), size4(x.shape()[1], 1)); }
+  { return math_expression(x, i, op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_MATRIX_COLUMN_TYPE), x.context(), x.dtype(), {x.shape()[1]}); }
 
 DEFINE_ACCESS_COL(array_base, value_scalar)
 DEFINE_ACCESS_COL(array_base, for_idx_t)
@@ -754,17 +755,17 @@ DEFINE_ACCESS_COL(math_expression, math_expression)
 
 ///*--- Reductions ---*/
 ////---------------------------------------
-#define DEFINE_DOT(OP, OPNAME)\
+#define DEFINE_REDUCTION(OP, OPNAME)\
 math_expression OPNAME(array_base const & x, int_t axis)\
 {\
   if(axis < -1 || axis > x.dim())\
     throw std::out_of_range("The axis entry is out of bounds");\
   else if(axis==-1)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{1});\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), {1});\
   else if(axis==0)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[1]});\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), {x.shape()[1]});\
   else\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[0]});\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), {x.shape()[0]});\
 }\
 \
 math_expression OPNAME(math_expression const & x, int_t axis)\
@@ -772,34 +773,34 @@ math_expression OPNAME(math_expression const & x, int_t axis)\
   if(axis < -1 || axis > x.dim())\
     throw std::out_of_range("The axis entry is out of bounds");\
   if(axis==-1)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{1});\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_VECTOR_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), {1});\
   else if(axis==0)\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[1]});\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_COLUMNS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), {x.shape()[1]});\
   else\
-    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), size4{x.shape()[0]});\
+    return math_expression(x, invalid_node(), op_element(OPERATOR_ROWS_DOT_TYPE_FAMILY, OP), x.context(), x.dtype(), {x.shape()[0]});\
 }
 
-DEFINE_DOT(OPERATOR_ADD_TYPE, sum)
-DEFINE_DOT(OPERATOR_ELEMENT_ARGMAX_TYPE, argmax)
-DEFINE_DOT(OPERATOR_ELEMENT_MAX_TYPE, max)
-DEFINE_DOT(OPERATOR_ELEMENT_MIN_TYPE, min)
-DEFINE_DOT(OPERATOR_ELEMENT_ARGMIN_TYPE, argmin)
+DEFINE_REDUCTION(OPERATOR_ADD_TYPE, sum)
+DEFINE_REDUCTION(OPERATOR_ELEMENT_ARGMAX_TYPE, argmax)
+DEFINE_REDUCTION(OPERATOR_ELEMENT_MAX_TYPE, max)
+DEFINE_REDUCTION(OPERATOR_ELEMENT_MIN_TYPE, min)
+DEFINE_REDUCTION(OPERATOR_ELEMENT_ARGMIN_TYPE, argmin)
 
-#undef DEFINE_DOT
+#undef DEFINE_REDUCTION
 
 namespace detail
 {
 
   math_expression matmatprod(array_base const & A, array_base const & B)
   {
-    size4 shape{A.shape()[0], B.shape()[1]};
+    shape_t shape{A.shape()[0], B.shape()[1]};
     return math_expression(A, B, op_element(OPERATOR_GEMM_TYPE_FAMILY, OPERATOR_GEMM_NN_TYPE), A.context(), A.dtype(), shape);
   }
 
   math_expression matmatprod(math_expression const & A, array_base const & B)
   {
     operation_node_type type = OPERATOR_GEMM_NN_TYPE;
-    size4 shape{A.shape()[0], B.shape()[1]};
+    shape_t shape{A.shape()[0], B.shape()[1]};
 
     math_expression::node & A_root = const_cast<math_expression::node &>(A.tree()[A.root()]);
     bool A_trans = A_root.op.type==OPERATOR_TRANS_TYPE;
@@ -816,7 +817,7 @@ namespace detail
   math_expression matmatprod(array_base const & A, math_expression const & B)
   {
     operation_node_type type = OPERATOR_GEMM_NN_TYPE;
-    size4 shape{A.shape()[0], B.shape()[1]};
+    shape_t shape{A.shape()[0], B.shape()[1]};
 
     math_expression::node & B_root = const_cast<math_expression::node &>(B.tree()[B.root()]);
     bool B_trans = B_root.op.type==OPERATOR_TRANS_TYPE;
@@ -835,7 +836,7 @@ namespace detail
     operation_node_type type = OPERATOR_GEMM_NN_TYPE;
     math_expression::node & A_root = const_cast<math_expression::node &>(A.tree()[A.root()]);
     math_expression::node & B_root = const_cast<math_expression::node &>(B.tree()[B.root()]);
-    size4 shape{A.shape()[0], B.shape()[1]};
+    shape_t shape{A.shape()[0], B.shape()[1]};
 
     bool A_trans = A_root.op.type==OPERATOR_TRANS_TYPE;
     bool B_trans = B_root.op.type==OPERATOR_TRANS_TYPE;
@@ -873,7 +874,7 @@ namespace detail
     }
     if(A_trans)
     {
-      math_expression tmp(A, repmat(x, 1, M), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ELEMENT_PROD_TYPE), A.context(), A.dtype(), size4(N, M));
+      math_expression tmp(A, repmat(x, 1, M), op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ELEMENT_PROD_TYPE), A.context(), A.dtype(), {N, M});
       //Remove trans
       tmp.tree()[tmp.root()].lhs = A.tree()[A.root()].lhs;
       return sum(tmp, 0);
@@ -886,10 +887,10 @@ namespace detail
 }
 
 math_expression reshape(array_base const & x, int_t shape0, int_t shape1)
-{  return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_RESHAPE_TYPE), x.context(), x.dtype(), size4(shape0, shape1)); }
+{  return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_RESHAPE_TYPE), x.context(), x.dtype(), {shape0, shape1}); }
 
 math_expression reshape(math_expression const & x, int_t shape0, int_t shape1)
-{  return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_RESHAPE_TYPE), x.context(), x.dtype(), size4(shape0, shape1)); }
+{  return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_RESHAPE_TYPE), x.context(), x.dtype(), {shape0, shape1}); }
 
 
 #define DEFINE_DOT(LTYPE, RTYPE) \
@@ -897,21 +898,14 @@ math_expression dot(LTYPE const & x, RTYPE const & y)\
 {\
   numeric_type dtype = x.dtype();\
   driver::Context const & context = x.context();\
-  if(x.shape()[1]==0)\
+  if(x.dim()==2 && x.shape()[1]==0)\
     return zeros(x.shape()[0], y.shape()[1], dtype, context);\
-  if(x.shape()[0]==0 || y.shape()[1]==0)\
-    return math_expression(invalid_node(), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_INVALID_TYPE), context, dtype, size4());\
-  if(x.dim()<1 || y.dim()<1){\
+  if(x.shape()[0]==0 || (y.dim()==2 && y.shape()[1]==0))\
+    return math_expression(invalid_node(), invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_INVALID_TYPE), context, dtype, {0});\
+  if(x.dim()<1 || y.dim()<1)\
     return x*y;\
-  }\
-  if(x.dim()==1 && y.dim()==1){\
-    if(x.shape()[1]==1 && y.shape()[0]==1)\
-        return outer(x, y);\
-    else if(x.shape()[0]==1 && y.shape()[1]==1)\
-        return sum(x*trans(y));\
-    else\
-        return sum(x*y);\
-  }\
+  if(x.dim()==1 && y.dim()==1)\
+    return sum(x*y);\
   else if(x.dim()==2 && y.dim()==1)\
     return detail::matvecprod(x, y);\
   else if(x.dim()==1 && y.dim()==2)\
@@ -1009,7 +1003,7 @@ void copy(std::vector<T> const & cx, array_base & x, driver::CommandQueue & queu
   if(x.ld()==x.shape()[0])
     assert((int_t)cx.size()==x.dsize());
   else
-    assert((int_t)cx.size()==prod(x.shape()));
+    assert((int_t)cx.size()==x.shape().prod());
   copy((void const*)cx.data(), x, queue, blocking);
 }
 
@@ -1019,7 +1013,7 @@ void copy(array_base const & x, std::vector<T> & cx, driver::CommandQueue & queu
   if(x.ld()==x.shape()[0])
     assert((int_t)cx.size()==x.dsize());
   else
-    assert((int_t)cx.size()==prod(x.shape()));
+    assert((int_t)cx.size()==x.shape().prod());
   copy(x, (void*)cx.data(), queue, blocking);
 }
 

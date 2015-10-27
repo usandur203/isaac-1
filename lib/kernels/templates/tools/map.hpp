@@ -37,7 +37,7 @@ class map_functor : public traversal_functor
     std::string dtype = to_string(a->dtype());
     unsigned int id = binder_.get(a, is_assigned);
     //Scalar
-    if(max(a->shape())==1)
+    if(a->shape().max()==1)
       return std::shared_ptr<mapped_object>(new mapped_array(dtype, id, 's'));
     //Vector
     else if(a->dim()==1){

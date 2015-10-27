@@ -69,7 +69,7 @@ public:
         {
             kernel_.setArg(current_arg_++, a->data());
             //scalar
-            if(max(a->shape())==1)
+            if(a->shape().max()==1)
             {
                 kernel_.setSizeArg(current_arg_++, a->start());
             }

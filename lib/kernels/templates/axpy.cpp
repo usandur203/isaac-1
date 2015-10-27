@@ -182,7 +182,7 @@ axpy::axpy(unsigned int simd, unsigned int ls, unsigned int ng,
 
 std::vector<int_t> axpy::input_sizes(math_expression const & expressions) const
 {
-  return expressions.shape();
+  return {expressions.shape().max()};
 }
 
 void axpy::enqueue(driver::CommandQueue & queue, driver::Program const & program, std::string const & suffix, base & fallback, execution_handler const & control)
