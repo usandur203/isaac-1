@@ -274,7 +274,7 @@ array_base & array_base::operator/=(math_expression const & rhs)
 //---------------------------------------
 math_expression array_base::operator[](for_idx_t idx) const
 {
-  return math_expression(*this, idx, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ACCESS_INDEX_TYPE), context_, dtype_, shape_);
+  return math_expression(*this, idx, op_element(OPERATOR_BINARY_TYPE_FAMILY, OPERATOR_ACCESS_INDEX_TYPE), context_, dtype_, {1});
 }
 
 scalar array_base::operator [](int_t idx)

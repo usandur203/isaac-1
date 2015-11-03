@@ -25,6 +25,16 @@ enum interface_t
 #define INC(X) X.stride()[0]
 #define LD(X) X.stride()[1]
 
+template<class Iterator>
+std::string join(Iterator begin, Iterator end, std::string delimiter){
+  std::string result;
+  while(begin!=end){
+    result += *begin;
+    if(++begin!=end) result += delimiter;
+  }
+  return result;
+}
+
 /*------ Simple Vector ---------*/
 template<class T>
 class simple_vector_base
@@ -138,6 +148,16 @@ public:
 };
 
 /*------ Initializer ---------*/
+
+template<class T>
+std::vector<T> random(size_t N)
+{
+  std::vector<T> res(N);
+  for (size_t i = 0; i < res.size(); ++i)
+    res[i] = (T)rand()/RAND_MAX;
+  return res;
+}
+
 template<typename T>
 void init_rand(simple_vector_base<T> & x)
 {
@@ -177,7 +197,6 @@ bool diff(VecType1 const & x, VecType2 const & y, typename VecType1::value_type 
     max = std::max(max, delta);
     if(delta > epsilon)
     {
-      std::cout << i << " " << x[i] << " " << y[i]<<std::endl;
       return true;
     }
   }

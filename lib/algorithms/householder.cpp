@@ -127,6 +127,8 @@ namespace isaac
       }
       //Cleanup
       gebd2(A({i,end}, {i,end}), &tauq[i], &taup[i], &d[i], &e[i]);
+      diag(A) = std::vector<float>(d, d + N);
+      diag(A, 1) = std::vector<float>(e, e + N - 1);
   }
 
 
