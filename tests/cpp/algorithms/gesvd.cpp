@@ -5,7 +5,6 @@
 #include "isaac/algorithms/lasr.h"
 #include "common.hpp"
 #include "lapacke.h"
-#include "external/f2c.h"
 
 namespace sc = isaac;
 
@@ -13,7 +12,7 @@ template<class T>
 T* p(std::vector<T> & x) { return x.data(); }
 
 extern "C"{
-int slasr_(char *side, char *pivot, char *direct, integer *m, integer *n, real *c__, real *s, real *a, integer *lda);
+int slasr_(char *side, char *pivot, char *direct, lapack_int *m, lapack_int *n, float *c__, float *s, float *a, lapack_int *lda);
 }
 
 template<class T>
@@ -80,8 +79,6 @@ void test(int M, int N, int nb, T epsilon)
     std::cout << std::endl;
 
   std::cout << "SLASR-RVB...";
-  integer MM = M;
-  integer NN = N;
   std::vector<T> hcos = random<T>(N-1);
   std::vector<T> hsin = random<T>(N-1);
   sc::array cos = hcos;
@@ -89,7 +86,7 @@ void test(int M, int N, int nb, T epsilon)
   char side = 'R';
   char pivot = 'V';
   char direct = 'B';
-  slasr_(&side, &pivot, &direct, &MM, &NN, p(hcos), p(hsin), p(cA.data()), &MM);
+  slasr_(&side, &pivot, &direct, &M, &N, p(hcos), p(hsin), p(cA.data()), &M);
   sc::lasr(side, pivot, direct, cos, sin, A);
   sc::copy(A, tmp);
   if(diff(tmp, cA.data(), epsilon))

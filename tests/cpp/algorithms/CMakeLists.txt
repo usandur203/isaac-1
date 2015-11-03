@@ -1,10 +1,5 @@
-set(EXTSRC)
-file(GLOB EXTSRC "${CMAKE_CURRENT_SOURCE_DIR}/external/*.c")
-message(STATUS ${EXTSRC})
-add_library(external-routines SHARED ${EXTSRC})
-
 foreach(PROG gesvd)
      add_executable(test-${PROG} ${PROG}.cpp)
      add_test(test-${PROG} test-${PROG})
-     target_link_libraries(test-${PROG} external-routines isaac openblas )
+     target_link_libraries(test-${PROG} isaac openblas )
 endforeach()
