@@ -2,6 +2,7 @@
 #include "isaac/symbolic/execute.h"
 #include "isaac/symbolic/io.h"
 #include "isaac/algorithms/householder.h"
+#include "isaac/algorithms/lasr.h"
 #include "common.hpp"
 #include "lapacke.h"
 #include "external/f2c.h"
@@ -89,8 +90,7 @@ void test(int M, int N, int nb, T epsilon)
   char pivot = 'V';
   char direct = 'B';
   slasr_(&side, &pivot, &direct, &MM, &NN, p(hcos), p(hsin), p(cA.data()), &MM);
-  using sc::_i0;
-  sc::execute(sfor(_i0 = N-2, _i0 >= 0, _i0-=1, rot(col(A, _i0), col(A, _i0 + 1), cos[_i0], sin[_i0])));
+  sc::lasr(side, pivot, direct, cos, sin, A);
   sc::copy(A, tmp);
   if(diff(tmp, cA.data(), epsilon))
     std::cout << "[Failure!]" << std::endl;
