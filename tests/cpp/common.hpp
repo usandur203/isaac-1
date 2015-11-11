@@ -184,6 +184,15 @@ simple_matrix<T> simple_trans(simple_matrix_base<T> const & A)
 }
 
 /*------ Compare -----------*/
+template<typename T>
+bool diff(T a, T b, T epsilon, typename std::enable_if<std::is_arithmetic<T>::value>::type* = 0)
+{
+  T delta = std::abs(a - b);
+  if(std::max(a, b)!=0)
+    delta/=std::abs(std::max(a, b));
+  return delta > epsilon;
+}
+
 template<class VecType1, class VecType2>
 bool diff(VecType1 const & x, VecType2 const & y, typename VecType1::value_type epsilon)
 {
@@ -191,14 +200,8 @@ bool diff(VecType1 const & x, VecType2 const & y, typename VecType1::value_type 
   T max = 0;
   for(int_t i = 0 ; i < (int_t)x.size() ; ++i)
   {
-    T delta = std::abs(x[i] - y[i]);
-    if(std::max(x[i], y[i])!=0)
-      delta/=std::abs(std::max(x[i], y[i]));
-    max = std::max(max, delta);
-    if(delta > epsilon)
-    {
+    if(diff(x[i], y[i], epsilon))
       return true;
-    }
   }
   return false;
 }

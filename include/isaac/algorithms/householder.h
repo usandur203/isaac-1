@@ -24,6 +24,11 @@ namespace isaac
   void orgl2(view A, int_t K, float* tau);
   void orglq(view A, int_t K, float* tau);
   void orgbr(char flag, array_base& A, int_t K, float* tau);
+
+  void las2( float f, float g, float h, float* ssmin, float* ssmax);
+  void lasv2(float f, float g, float h, float *ssmin, float *ssmax, float *snr, float * csr, float *snl, float *csl);
+  int lartg(float f, float g, float *cs, float *sn, float *r);
+  void bdsqr(char uplo, float* d, float* e, array_base & VT, array_base & U);
 }
 
 #endif
