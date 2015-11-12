@@ -123,6 +123,7 @@ public:
 class ISAACAPI view : public array_base
 {
 public:
+  view(array & data);
   view(array_base& data, slice const & s1);
   view(array_base& data, slice const & s1, slice const & s2);
   view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc);
@@ -304,6 +305,9 @@ static const for_idx_t _i9{9};
 //Initializers
 ISAACAPI math_expression eye(int_t, int_t, isaac::numeric_type, driver::Context const & context = driver::backend::contexts::get_default());
 ISAACAPI math_expression zeros(int_t M, int_t N, numeric_type dtype, driver::Context const & context = driver::backend::contexts::get_default());
+
+//Swap
+ISAACAPI void swap(view x, view y);
 
 //Reshape
 ISAACAPI math_expression reshape(array_base const &, shape_t const &);

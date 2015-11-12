@@ -29,14 +29,20 @@ int main()
     std::cout << A << std::endl;
     std::cout << std::endl;
 
-    sc::view x = A({1,2},sc::all);
-    sc::view y = A(sc::all, {1,2});
+    sc::view x = A(0,sc::all);
+    sc::view y = A(1, sc::all);
 
     sc::array xx = x;
+    sc::array yy = y;
 
-    std::cout << "before" << std::endl;
-    A(0,0) = (float)3.13;
-    std::cout << A << std::endl;
+//    std::cout << "x: " << x << std::endl;
+//    std::cout << "y: " << y << std::endl;
+
+    sc::swap(x, y);
+
+    std::cout << "x: " << x << std::endl;
+    std::cout << "y: " << y << std::endl;
+
 //    std::cout << "A[3, 2:end]:" << std::endl;
 //    std::cout << sline << std::endl;
 //    std::cout << A(3, {2,sc::end}) << std::endl;

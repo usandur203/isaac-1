@@ -7,7 +7,7 @@
 namespace isaac
 {
 
-  void lasr(char side, char pivot, char direct, array_base const & cos, array_base const & sin, array_base & A)
+  void lasr(char side, char pivot, char direct, array_base const & cos, array_base const & sin, view A)
   {
     using isaac::_i0;
     assert(A.dim()==2 && "A must be 2D");

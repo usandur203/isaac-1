@@ -326,13 +326,16 @@ view array_base::operator()(slice const & si, slice const & sj)
 
 array::array(math_expression const & proxy) : array_base(execution_handler(proxy)) {}
 
-array::array(array_base const &other): array_base(other.dtype(), other.shape(), other.context())
+array::array(array_base const & other): array_base(other.dtype(), other.shape(), other.context())
 { *this = other; }
 
-array::array(array const &other): array((array_base const &)other){ }
+array::array(array const &other): array((array_base const &)other)
+{ }
+
 
 //---------------------------------------
 /*--- View ---*/
+view::view(array & data) : array_base(data, {0, end}){}
 view::view(array_base& data, slice const & s1) : array_base(data, s1) {}
 view::view(array_base& data, slice const & s1, slice const & s2) : array_base(data, s1, s2) {}
 view::view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc) : array_base(size1, dtype, data, start, inc) {}
@@ -878,6 +881,14 @@ namespace detail
 
 }
 
+//Swap
+ISAACAPI void swap(view x, view y)
+{
+  //Seems like some compilers will generate incorrect code without the 1*...
+  execute(fuse(assign(y,1*x), assign(x,1*y)));
+}
+
+//Reshape
 math_expression reshape(array_base const & x, shape_t const & shape)
 {  return math_expression(x, invalid_node(), op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_RESHAPE_TYPE), x.context(), x.dtype(), shape); }
 

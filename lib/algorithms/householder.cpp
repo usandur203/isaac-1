@@ -519,8 +519,8 @@ namespace isaac
     int oldll = -1;
     //M points to the last element of unconverged part of matrix
     int M = N - 1;
-    std::vector<float> hcosa(M), hcosb(M), hsina(M), hsinb(M);
-    array gcosa(M, FLOAT_TYPE), gcosb(M, FLOAT_TYPE), gsina(M, FLOAT_TYPE), gsinb(M, FLOAT_TYPE);
+    std::vector<float> hcosr(M), hcosl(M), hsinr(M), hsinl(M);
+    array gcosr(M, FLOAT_TYPE), gcosl(M, FLOAT_TYPE), gsinr(M, FLOAT_TYPE), gsinl(M, FLOAT_TYPE);
 
     float smin;
     int iter = 0;
@@ -562,9 +562,10 @@ namespace isaac
             d[M-1] = sigmx;
             e[M-1] = 0;
             d[M] = sigmn;
-            //TODO
-            if(VT){}
-            if(U){}
+            if(VT)
+                rot((*VT)(M-1, {1,end}), (*VT)(M, {1,end}), cosr, sinr);
+            if(U)
+                rot((*U)({1,end}, M-1), (*U)({1,end}, M), cosl, sinl);
             M -= 2;
             continue;
         }
@@ -678,18 +679,25 @@ namespace isaac
                         e[i-1] = oldsn*r;
                     lartg(oldcs*r, d[i+1]*sn, &oldcs, &oldsn, &d[i]);
                     /* store for later */
-                    hcosa[i] = cs;
-                    hcosb[i] = oldcs;
-                    hsina[i] = sn;
-                    hsinb[i] = oldsn;
+                    hcosr[i] = cs;
+                    hsinr[i] = sn;
+                    hcosl[i] = oldcs;
+                    hsinl[i] = oldsn;
                 }
                 float h = d[M]*cs;
                 d[M] = h*oldcs;
                 e[M-1] = h*oldsn;
                 /* update singular vectors */
-                //TODO
-                if(VT){}
-                if(U){}
+                if(VT){
+                    copy(hcosr, gcosr);
+                    copy(hsinr, gsinr);
+                    lasr('L', 'V', 'F', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                }
+                if(U){
+                    copy(hcosl, gcosl);
+                    copy(hsinl, gsinl);
+                    lasr('R', 'V', 'F', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                }
                 /* test convergence */
                 if(abs(e[M-1]) <= thresh)
                     e[M-1] = 0;
@@ -705,18 +713,25 @@ namespace isaac
                         e[i-1] = oldsn*r;
                     lartg(oldcs*r, d[i-1]*sn, &oldcs, &oldsn, &d[i]);
                     /* store for later */
-                    hcosa[i] = cs;
-                    hcosb[i] = oldcs;
-                    hsina[i] = sn;
-                    hsinb[i] = oldsn;
+                    hcosr[i] = cs;
+                    hsinr[i] = sn;
+                    hcosl[i] = oldcs;
+                    hsinl[i] = oldsn;
                 }
                 float h = d[ll]*cs;
                 d[ll] = h*oldcs;
                 e[ll] = h*oldsn;
                 /* update singular vectors */
-                //TODO
-                if(VT){}
-                if(U){}
+                if(VT){
+                    copy(hcosr, gcosr);
+                    copy(hsinr, gsinr);
+                    lasr('L', 'V', 'B', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                }
+                if(U){
+                    copy(hcosl, gcosl);
+                    copy(hsinl, gsinl);
+                    lasr('R', 'V', 'B', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                }
                 /* test convergence */
                 if(abs(e[ll]) <= thresh)
                     e[ll] = 0;
@@ -746,15 +761,24 @@ namespace isaac
                         g = sinl * e[i + 1];
                         e[i + 1] = cosl * e[i + 1];
                     }
-                    hcosa[i - ll + 1] = cosl;
-                    hsina[i - ll + 1] = sinl;
-                    hcosb[i - ll + 1] = cosr;
-                    hsinb[i - ll + 1] = sinr;
+                    hcosr[i - ll + 1] = cosl;
+                    hsinr[i - ll + 1] = sinl;
+                    hcosl[i - ll + 1] = cosr;
+                    hsinl[i - ll + 1] = sinr;
                 }
                 e[M-1] = f;
-                //TODO
-                if(VT){}
-                if(U){}
+
+                /* update singular vectors */
+                if(VT){
+                    copy(hcosr, gcosr);
+                    copy(hsinr, gsinr);
+                    lasr('L', 'V', 'F', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                }
+                if(U){
+                    copy(hcosl, gcosl);
+                    copy(hsinl, gsinl);
+                    lasr('R', 'V', 'F', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                }
                 /* Test convergence */
                 if(abs(e[M-1]) <= thresh)
                     e[M-1] = 0;
@@ -781,15 +805,23 @@ namespace isaac
                         g = sinl * e[i - 2];
                         e[i - 2] = cosl * e[i - 2];
                     }
-                    hcosa[i - ll] = cosr;
-                    hsina[i - ll] = -sinr;
-                    hcosb[i - ll] = cosl;
-                    hsinb[i - ll] = -sinl;
+                    hcosr[i - ll] = cosr;
+                    hsinr[i - ll] = -sinr;
+                    hcosl[i - ll] = cosl;
+                    hsinl[i - ll] = -sinl;
                 }
                 e[ll] = f;
-                //TODO
-                if(VT){}
-                if(U){}
+                /* update singular vectors */
+                if(VT){
+                    copy(hcosr, gcosr);
+                    copy(hsinr, gsinr);
+                    lasr('L', 'V', 'B', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                }
+                if(U){
+                    copy(hcosl, gcosl);
+                    copy(hsinl, gsinl);
+                    lasr('R', 'V', 'B', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                }
                 /* Test convergence */
                 if(abs(e[ll]) <= thresh)
                     e[ll] = 0;
@@ -811,7 +843,14 @@ namespace isaac
                 smin = d[j];
             }
         }
+        /* Swap singular values */
         std::swap(d[isub], d[N - i - 1]);
+
+        /* Swap singular vectors */
+        if(VT)
+            swap((*VT)(isub, {1, end}), (*VT)(N - i - 1, {1, end}));
+        if(U)
+            swap((*U)({1, end}, isub), (*U)({1, end}, N - i - 1));
     }
 
 
