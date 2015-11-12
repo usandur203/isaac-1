@@ -3,14 +3,14 @@
 
 #include "isaac/array.h"
 
-double slamch_(char cmach);
-double dlamch_(char cmach);
+double _lapack_slamch_(char cmach);
+double _lapack_dlamch_(char cmach);
 
 namespace isaac
 {
   template<typename real> double lamch(char cmach);
-  template<> double lamch<float>(char cmach) { return slamch_(cmach); }
-  template<> double lamch<double>(char cmach) { return dlamch_(cmach); }
+  template<> double lamch<float>(char cmach) { return _lapack_slamch_(cmach); }
+  template<> double lamch<double>(char cmach) { return _lapack_dlamch_(cmach); }
 
   void larf(char side, view v, float tau, view C);
   void larfg(view x, float* tau, float* alpha);
@@ -28,7 +28,7 @@ namespace isaac
   void las2( float f, float g, float h, float* ssmin, float* ssmax);
   void lasv2(float f, float g, float h, float *ssmin, float *ssmax, float *snr, float * csr, float *snl, float *csl);
   int lartg(float f, float g, float *cs, float *sn, float *r);
-  void bdsqr(char uplo, float* d, float* e, array_base & VT, array_base & U);
+  void bdsqr(char uplo, int N, float* d, float* e, array_base * VT, array_base * U);
 }
 
 #endif

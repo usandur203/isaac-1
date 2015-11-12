@@ -12,6 +12,9 @@ template<class T>
 T* p(std::vector<T> & x) { return x.data(); }
 
 extern "C"{
+int sbdsqr_debug_(char *uplo, int *n, int *ncvt, int *
+  nru, int *ncc, float *d__, float *e, float *vt, int *ldvt, float *
+  u, int *ldu, float *c__, int *ldc, float *work, int *info);
 int slasr_(char *side, char *pivot, char *direct, lapack_int *m, lapack_int *n, float *c__, float *s, float *a, lapack_int *lda);
 void slas2_( float* f, float* g, float* h, float* ssmin, float* ssmax);
 void slasv2_(float* f, float* g, float* h, float *ssmin, float *ssmax, float *snr, float * csr, float *snl, float *csl);
@@ -21,6 +24,7 @@ int slartg_(float* f, float* g, float* cs, float *sn, float *r);
 template<class T>
 void test(int M, int N, int nb, T epsilon)
 {
+  int _0 = 0;
   simple_matrix<T> cA(M, N);
   for(int i = 0 ; i < M ; ++i)
     for(int j = 0 ; j < N ; ++j)
@@ -81,31 +85,29 @@ void test(int M, int N, int nb, T epsilon)
   else
     std::cout << std::endl;
 
-  std::cout << "LASR-RVB...";
-  std::vector<T> hcos = random<T>(N-1);
-  std::vector<T> hsin = random<T>(N-1);
-  sc::array cos = hcos;
-  sc::array sin = hsin;
-  char side = 'R';
-  char pivot = 'V';
-  char direct = 'B';
-  slasr_(&side, &pivot, &direct, &M, &N, p(hcos), p(hsin), p(cA.data()), &M);
-  sc::lasr(side, pivot, direct, cos, sin, A);
-  sc::copy(A, tmp);
-  if(diff(tmp, cA.data(), epsilon))
-    std::cout << "[Failure!]" << std::endl;
-  else
-    std::cout << std::endl;
+#define TEST_LASR(SIDE, PIVOT, DIRECT) \
+  {\
+  std::cout << "LASR-" << SIDE << PIVOT << DIRECT << "...";\
+  std::vector<T> hcos = random<T>(N-1);\
+  std::vector<T> hsin = random<T>(N-1);\
+  sc::array cos = hcos;\
+  sc::array sin = hsin;\
+  char side = SIDE;\
+  char pivot = PIVOT;\
+  char direct = DIRECT;\
+  slasr_(&side, &pivot, &direct, &M, &N, p(hcos), p(hsin), p(cA.data()), &M);\
+  sc::lasr(side, pivot, direct, cos, sin, A);\
+  sc::copy(A, tmp);\
+  if(diff(tmp, cA.data(), epsilon))\
+    std::cout << "[Failure!]" << std::endl;\
+  else\
+    std::cout << std::endl;\
+  }
 
-  std::cout << "LASR-LVB...";
-  side = 'L';
-  slasr_(&side, &pivot, &direct, &M, &N, p(hcos), p(hsin), p(cA.data()), &M);
-  sc::lasr(side, pivot, direct, cos, sin, A);
-  sc::copy(A, tmp);
-  if(diff(tmp, cA.data(), epsilon))
-    std::cout << "[Failure!]" << std::endl;
-  else
-    std::cout << std::endl;
+  TEST_LASR('R', 'V', 'B')
+  TEST_LASR('R', 'V', 'F')
+  TEST_LASR('L', 'V', 'B')
+  TEST_LASR('L', 'V', 'F')
 
 
   //BDSQR related
@@ -153,7 +155,23 @@ void test(int M, int N, int nb, T epsilon)
     std::cout << std::endl;
   }
 
-//  int lartg(float f, float g, float *cs, float *sn, float *r);
+  sc::array U(M, M, sc::FLOAT_TYPE);
+  sc::array VT(N, N, sc::FLOAT_TYPE);
+  std::vector<T> hU(M*M);
+  std::vector<T> hVT(N*N);
+  int MN =  d.size();
+  hwork.resize(4*N);
+  int _1 = 1;
+  {
+    std::cout << "BDSQR-U...";
+    sbdsqr_("U", &MN, &M, &N, &_0, p(hd), p(he), p(hVT), &M, p(hU), &N, NULL, &_1, p(hwork), &info);
+    sc::bdsqr('U', MN, p(d), p(e), &VT, &U);
+    std::vector<std::string> errors;
+    if(diff(d, hd, epsilon)) errors.push_back("d");
+    if(errors.size())
+      std::cout << " [Failure!: " << join(errors.begin(), errors.end(), ", ") << "]";
+    std::cout << std::endl;
+  }
 }
 
 int main()

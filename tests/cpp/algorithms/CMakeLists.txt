@@ -1,5 +1,5 @@
 foreach(PROG gesvd)
-     add_executable(test-${PROG} ${PROG}.cpp)
+     add_executable(test-${PROG} ${PROG}.cpp external/bdsqr.c)
      add_test(test-${PROG} test-${PROG})
      target_link_libraries(test-${PROG} isaac openblas )
 endforeach()

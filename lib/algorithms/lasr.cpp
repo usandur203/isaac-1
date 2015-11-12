@@ -15,8 +15,13 @@ namespace isaac
     int_t N = A.shape()[1];
     if(side=='R' && pivot=='V' && direct=='B')
       execute(sfor(_i0 = N-2, _i0 >= 0, _i0-=1, rot(col(A, _i0), col(A, _i0 + 1), cos[_i0], sin[_i0])));
+    else if(side=='R' && pivot=='V' && direct=='F')
+      execute(sfor(_i0 = 0, _i0 <= N-2, _i0+=1, rot(col(A, _i0), col(A, _i0 + 1), cos[_i0], sin[_i0])));
     else if(side=='L' && pivot=='V' && direct=='B')
       execute(sfor(_i0 = M-2, _i0 >= 0, _i0-=1, rot(row(A, _i0), row(A, _i0 + 1), cos[_i0], sin[_i0])));
+    else if(side=='L' && pivot=='V' && direct=='F')
+      execute(sfor(_i0 = 0, _i0 <= M-2, _i0+=1, rot(row(A, _i0), row(A, _i0 + 1), cos[_i0], sin[_i0])));
+
 
   }
 

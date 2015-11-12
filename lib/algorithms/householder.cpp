@@ -400,7 +400,7 @@ namespace isaac
     float safmin = lamch<float>('S');
     float eps = lamch<float>('E');
     float B = lamch<float>('B');
-    float safmn2 = pow(B, static_cast<int>(log(safmin/eps) / log(B) / (float)2));
+    float safmn2 = pow(B, static_cast<int>(log((double)safmin/eps) / log((double)B) / (float)2));
     float safmx2 = 1 / safmn2;
     if(g==0)
     {
@@ -429,7 +429,7 @@ namespace isaac
                 g1*=safmn2;
                 scale = max(abs(f1), abs(g1));
             }
-            *r = sqrt(f1*f1 + g1*g1);
+            *r = sqrt((f1*f1 + g1*g1));
             *cs = f1 / *r;
             *sn = g1 / *r;
             for(int i = 0 ; i < count ; ++i)
@@ -458,7 +458,7 @@ namespace isaac
             *cs = f1 / *r;
             *sn = g1 / *r;
         }
-        if(abs(f) >= abs(g) && *cs < 0){
+        if(abs(f) > abs(g) && *cs < 0){
             *cs = -*cs;
             *sn = -*sn;
             *r = -*r;
@@ -482,14 +482,15 @@ namespace isaac
     }
     float eps = lamch<float>('E');
     float unfl = lamch<float>('S');
+    eps = 5.96046e-08;
+    unfl = 1.17549e-38;
     if(lower){
         //TODO
     }
-    float d3 = 100, d4 = pow(eps, (float)-.125);
+    float d3 = 100, d4 = pow((double)eps, -.125);
     float d1 = 10, d2 = min(d3, d4);
     float tolmul = max(d1, d2);
     float tol = tolmul*eps;
-
     //Compute approximate maximum singular value
     float smax = 0;
     for(int i = 0; i < N ; ++i)
@@ -522,7 +523,9 @@ namespace isaac
     array gcosa(M, FLOAT_TYPE), gcosb(M, FLOAT_TYPE), gsina(M, FLOAT_TYPE), gsinb(M, FLOAT_TYPE);
 
     float smin;
-    for(int iter = 0 ; iter < maxit && M > 1 ; iter++)
+    int iter = 0;
+    int idir = 0;
+    while(iter < maxit && M > 1)
     {
         //Find diagonal block of matrix to work on
         if(tol < 0 && abs(d[M]) <= thresh)
@@ -568,7 +571,6 @@ namespace isaac
 
         /* If working on new submatrix, choose shift direction
          * (from larger end diagonal element towards smaller)*/
-        int idir = 0;
         if(ll >oldm || M < oldll){
             if(abs(d[ll]) >= abs(d[M]))
                 /* Chase bulge from top to bottom */
@@ -602,10 +604,10 @@ namespace isaac
                         e[lll] = 0;
                         break;
                     }
-                    mu = abs(d[lll+1])*(mu/(mu + abs(e[lll])));
+                    mu = (double)abs(d[lll+1])*(mu/(mu + (double)abs(e[lll])));
                     sminl = min(sminl, mu);
                 }
-                if(e[lll]==0)
+                if(lll < M)
                     continue;
             }
         }
@@ -635,7 +637,7 @@ namespace isaac
                     mu = abs(d[lll])*(mu/(mu + abs(e[lll])));
                     sminl = min(sminl, mu);
                 }
-                if(e[lll]==0)
+                if(lll >= ll)
                     continue;
             }
         }
@@ -744,10 +746,10 @@ namespace isaac
                         g = sinl * e[i + 1];
                         e[i + 1] = cosl * e[i + 1];
                     }
-                    hcosa[i - ll + 1] = cosr;
-                    hsina[i - ll + 1] = sinr;
-                    hcosb[i - ll + 1] = cosl;
-                    hsinb[i - ll + 1] = sinl;
+                    hcosa[i - ll + 1] = cosl;
+                    hsina[i - ll + 1] = sinl;
+                    hcosb[i - ll + 1] = cosr;
+                    hsinb[i - ll + 1] = sinr;
                 }
                 e[M-1] = f;
                 //TODO
@@ -793,25 +795,23 @@ namespace isaac
                     e[ll] = 0;
             }
         }
+    }
+    /* All singular values converged, so make them positive */
+    for(int i = 0 ; i < N ; ++i)
+        if(d[i] < 0)
+            d[i] = -d[i];
 
-        /* All singular values converged, so make them positive */
-        for(int i = 0 ; i < N ; ++i)
-            if(d[i] < 0)
-                d[i] = -d[i];
-
-        /* Sort singular values into decreasing order */
-        for(int i = 0 ; i < N - 1 ; ++i){
-            int isub = 0;
-            float smin = d[0];
-            for(int j = 1 ; j < N - i ; ++j){
-                if(d[j] <= smin){
-                    isub = j;
-                    smin = d[j];
-                }
+    /* Sort singular values into decreasing order */
+    for(int i = 0 ; i < N - 1 ; ++i){
+        int isub = 0;
+        float smin = d[0];
+        for(int j = 1 ; j < N - i ; ++j){
+            if(d[j] <= smin){
+                isub = j;
+                smin = d[j];
             }
-            std::swap(d[isub], d[N - i - 1]);
         }
-
+        std::swap(d[isub], d[N - i - 1]);
     }
 
 
