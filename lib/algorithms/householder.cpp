@@ -5,6 +5,9 @@
 #include "isaac/algorithms/lasr.h"
 #include "isaac/symbolic/execute.h"
 
+extern "C" /* Subroutine */ int slartg_(float *, float *, float *, float *, float * );
+extern "C" void slasv2_(float *, float *, float *, float *, float *, float *, float *, float *, float *);
+
 namespace isaac
 {
 
@@ -502,10 +505,10 @@ namespace isaac
 
     float thresh;
     if(tol >= 0){
-        float sminoa = abs(d[0]);
+        float sminoa = abs((double)d[0]);
         float mu = sminoa;
-        for(int i = 1 ; i <= N && sminoa > 0 ; ++i){
-            mu = abs(d[i])*(mu / (mu + abs(e[i-1])));
+        for(int i = 1 ; i < N && sminoa > 0 ; ++i){
+            mu = abs((double)d[i])*(mu / (mu + abs(e[i-1])));
             sminoa = min(sminoa, mu);
         }
         sminoa /= sqrt((float)N);
@@ -525,7 +528,8 @@ namespace isaac
     float smin;
     int iter = 0;
     int idir = 0;
-    while(iter < maxit && M > 1)
+
+    while(iter < maxit && M >= 1)
     {
         //Find diagonal block of matrix to work on
         if(tol < 0 && abs(d[M]) <= thresh)
@@ -545,20 +549,19 @@ namespace isaac
             smin = min(smin, abss);
             smax = max(max(smax,abss), abse);
         }
-        e[ll] = 0;
         if(ll == M - 1){
             /* Convergence of bottom singular value, return to top of loop */
             --M;
             continue;
         }
-        ++ll;
+        ll++;
 
         /* E(LL) through E(M-1) are nonzero, E(LL-1) is zero */
         float sinr, cosr, sinl, cosl;
         if(ll==M-1)
         {
             float sigmn, sigmx;
-            lasv2(d[M-1], e[M-1], d[M], &sigmn, &sigmx, &sinr, &cosr, &sinl, &cosl);
+            slasv2_(&d[M-1], &e[M-1], &d[M], &sigmn, &sigmx, &sinr, &cosr, &sinl, &cosl);
             d[M-1] = sigmx;
             e[M-1] = 0;
             d[M] = sigmn;
@@ -679,10 +682,10 @@ namespace isaac
                         e[i-1] = oldsn*r;
                     lartg(oldcs*r, d[i+1]*sn, &oldcs, &oldsn, &d[i]);
                     /* store for later */
-                    hcosr[i] = cs;
-                    hsinr[i] = sn;
-                    hcosl[i] = oldcs;
-                    hsinl[i] = oldsn;
+                    hcosr[i - ll] = cs;
+                    hsinr[i - ll] = sn;
+                    hcosl[i - ll] = oldcs;
+                    hsinl[i - ll] = oldsn;
                 }
                 float h = d[M]*cs;
                 d[M] = h*oldcs;
@@ -691,12 +694,12 @@ namespace isaac
                 if(VT){
                     copy(hcosr, gcosr);
                     copy(hsinr, gsinr);
-                    lasr('L', 'V', 'F', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                    lasr('L', 'V', 'F', gcosr, gsinr, (*VT)({ll,M+1}, {1, end}));
                 }
                 if(U){
                     copy(hcosl, gcosl);
                     copy(hsinl, gsinl);
-                    lasr('R', 'V', 'F', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                    lasr('R', 'V', 'F', gcosl, gsinl, (*U)({1, end}, {ll, M+1}));
                 }
                 /* test convergence */
                 if(abs(e[M-1]) <= thresh)
@@ -713,10 +716,10 @@ namespace isaac
                         e[i-1] = oldsn*r;
                     lartg(oldcs*r, d[i-1]*sn, &oldcs, &oldsn, &d[i]);
                     /* store for later */
-                    hcosr[i] = cs;
-                    hsinr[i] = sn;
-                    hcosl[i] = oldcs;
-                    hsinl[i] = oldsn;
+                    hcosr[i - ll] = cs;
+                    hsinr[i - ll] = sn;
+                    hcosl[i - ll] = oldcs;
+                    hsinl[i - ll] = oldsn;
                 }
                 float h = d[ll]*cs;
                 d[ll] = h*oldcs;
@@ -725,12 +728,12 @@ namespace isaac
                 if(VT){
                     copy(hcosr, gcosr);
                     copy(hsinr, gsinr);
-                    lasr('L', 'V', 'B', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                    lasr('L', 'V', 'B', gcosr, gsinr, (*VT)({ll,M+1}, {1, end}));
                 }
                 if(U){
                     copy(hcosl, gcosl);
                     copy(hsinl, gsinl);
-                    lasr('R', 'V', 'B', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                    lasr('R', 'V', 'B', gcosl, gsinl, (*U)({1, end}, {ll, M+1}));
                 }
                 /* test convergence */
                 if(abs(e[ll]) <= thresh)
@@ -742,7 +745,7 @@ namespace isaac
             /* Use nonzero shift */
             if(idir==1)
             {
-                float f = (abs(d[ll]) - shift)*(sign(1,d[ll]) + shift/d[ll]);
+                float f = (abs((double)d[ll]) - shift)*(sign(1.,d[ll]) + shift/d[ll]);
                 float g = e[ll];
                 for(int i = ll; i < M ; ++i)
                 {
@@ -761,10 +764,10 @@ namespace isaac
                         g = sinl * e[i + 1];
                         e[i + 1] = cosl * e[i + 1];
                     }
-                    hcosr[i - ll + 1] = cosl;
-                    hsinr[i - ll + 1] = sinl;
-                    hcosl[i - ll + 1] = cosr;
-                    hsinl[i - ll + 1] = sinr;
+                    hcosr[i - ll] = cosr;
+                    hsinr[i - ll] = sinr;
+                    hcosl[i - ll] = cosl;
+                    hsinl[i - ll] = sinl;
                 }
                 e[M-1] = f;
 
@@ -772,13 +775,25 @@ namespace isaac
                 if(VT){
                     copy(hcosr, gcosr);
                     copy(hsinr, gsinr);
-                    lasr('L', 'V', 'F', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                    lasr('L', 'V', 'F', gcosr, gsinr, (*VT)({ll, M+1}, {0, end}));
                 }
                 if(U){
                     copy(hcosl, gcosl);
                     copy(hsinl, gsinl);
-                    lasr('R', 'V', 'F', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                    lasr('R', 'V', 'F', gcosl, gsinl, (*U)({0, end}, {ll, M+1}));
                 }
+
+//                int ii, jj;
+//                for(ii = 0 ; ii < N -1  ; ++ii)
+//                  printf("%f ", hcosl[ii]);
+//                printf("\n");
+
+//                for(ii = 0 ; ii < N -1  ; ++ii)
+//                  printf("%f ", hsinl[ii]);
+//                printf("\n");
+//                printf("%d %d\n", ll, M+1-ll);
+//                std::cout << *U << std::endl;
+
                 /* Test convergence */
                 if(abs(e[M-1]) <= thresh)
                     e[M-1] = 0;
@@ -815,12 +830,12 @@ namespace isaac
                 if(VT){
                     copy(hcosr, gcosr);
                     copy(hsinr, gsinr);
-                    lasr('L', 'V', 'B', gcosr, gsinr, (*VT)({ll,end}, {1, end}));
+                    lasr('L', 'V', 'B', gcosr, gsinr, (*VT)({ll,M+1}, {1, end}));
                 }
                 if(U){
                     copy(hcosl, gcosl);
                     copy(hsinl, gsinl);
-                    lasr('R', 'V', 'B', gcosl, gsinl, (*U)({1, end}, {ll, end}));
+                    lasr('R', 'V', 'B', gcosl, gsinl, (*U)({1, end}, {ll, M+1}));
                 }
                 /* Test convergence */
                 if(abs(e[ll]) <= thresh)

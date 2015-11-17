@@ -155,17 +155,30 @@ void test(int M, int N, int nb, T epsilon)
     std::cout << std::endl;
   }
 
-  sc::array U(M, M, sc::FLOAT_TYPE);
-  sc::array VT(N, N, sc::FLOAT_TYPE);
-  std::vector<T> hU(M*M);
-  std::vector<T> hVT(N*N);
+  d = hd;
+  e = he;
+  std::vector<T> hU = random<T>(M*M);
+  std::vector<T> hVT = random<T>(N*N);
+  sc::array U(M, M, hU);
+  sc::array VT(N, N, hVT);
   int MN =  d.size();
   hwork.resize(4*N);
   int _1 = 1;
   {
     std::cout << "BDSQR-U...";
-    sbdsqr_("U", &MN, &M, &N, &_0, p(hd), p(he), p(hVT), &M, p(hU), &N, NULL, &_1, p(hwork), &info);
+    std::cout << std::endl;
+    sbdsqr_debug_("U", &MN, &M, &N, &_0, p(hd), p(he), p(hVT), &M, p(hU), &N, NULL, &_1, p(hwork), &info);
+    std::cout << std::endl;
     sc::bdsqr('U', MN, p(d), p(e), &VT, &U);
+    std::cout << std::endl;
+    for(unsigned int i = 0 ; i < M ; ++i){
+      for(unsigned int j = 0 ; j < N ; ++j)
+        std::cout << hU[j*M + i] << "," << std::flush;
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+    std::cout << U << std::endl;
+    std::cout << std::endl;
     std::vector<std::string> errors;
     if(diff(d, hd, epsilon)) errors.push_back("d");
     if(errors.size())

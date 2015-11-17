@@ -335,7 +335,7 @@ array::array(array const &other): array((array_base const &)other)
 
 //---------------------------------------
 /*--- View ---*/
-view::view(array & data) : array_base(data, {0, end}){}
+view::view(array & data) : array_base(data){}
 view::view(array_base& data, slice const & s1) : array_base(data, s1) {}
 view::view(array_base& data, slice const & s1, slice const & s2) : array_base(data, s1, s2) {}
 view::view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc) : array_base(size1, dtype, data, start, inc) {}
@@ -736,7 +736,7 @@ DEFINE_ACCESS_ROW(math_expression, math_expression)
 
 #define DEFINE_ACCESS_COL(TYPEA, TYPEB) \
   math_expression col(TYPEA const & x, TYPEB const & i)\
-  { return math_expression(x, i, op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_MATRIX_COLUMN_TYPE), x.context(), x.dtype(), {x.shape()[1]}); }
+  { return math_expression(x, i, op_element(OPERATOR_UNARY_TYPE_FAMILY, OPERATOR_MATRIX_COLUMN_TYPE), x.context(), x.dtype(), {x.shape()[0]}); }
 
 DEFINE_ACCESS_COL(array_base, value_scalar)
 DEFINE_ACCESS_COL(array_base, for_idx_t)
