@@ -22,6 +22,7 @@ public:
   Buffer(cl_mem Buffer = 0, bool take_ownership = true);
   Buffer(Context const & context, size_t size);
   Context const & context() const;
+  size_t size() const;
   bool operator<(Buffer const &) const;
   bool operator==(Buffer const &) const;
   HANDLE_TYPE(cl_mem, CUdeviceptr)&  handle();
@@ -29,6 +30,7 @@ public:
 private:
   backend_type backend_;
   Context context_;
+  size_t size_;
   HANDLE_TYPE(cl_mem, CUdeviceptr) h_;
 };
 

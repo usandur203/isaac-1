@@ -785,14 +785,14 @@ namespace isaac
 
 //                int ii, jj;
 //                for(ii = 0 ; ii < N -1  ; ++ii)
-//                  printf("%f ", hcosl[ii]);
+//                  printf("%f ", hcosr[ii]);
 //                printf("\n");
 
 //                for(ii = 0 ; ii < N -1  ; ++ii)
-//                  printf("%f ", hsinl[ii]);
+//                  printf("%f ", hsinr[ii]);
 //                printf("\n");
 //                printf("%d %d\n", ll, M+1-ll);
-//                std::cout << *U << std::endl;
+//                std::cout << *VT << std::endl;
 
                 /* Test convergence */
                 if(abs(e[M-1]) <= thresh)
@@ -845,8 +845,11 @@ namespace isaac
     }
     /* All singular values converged, so make them positive */
     for(int i = 0 ; i < N ; ++i)
-        if(d[i] < 0)
+        if(d[i] < 0){
             d[i] = -d[i];
+            if (VT)
+              (*VT)(i,{0,end}) *= -1;
+        }
 
     /* Sort singular values into decreasing order */
     for(int i = 0 ; i < N - 1 ; ++i){

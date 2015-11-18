@@ -1,6 +1,7 @@
 #ifndef TEST_COMMON_HPP_
 #define TEST_COMMON_HPP_
 
+#include <cassert>
 #include <vector>
 #include <algorithm>
 #include "isaac/array.h"
@@ -147,6 +148,17 @@ public:
         simple_matrix_base<T>(start1, end1, stride1, start2, end2, stride2, A.ld(), A.data()){ }
 };
 
+template<class T>
+std::ostream& operator<<(std::ostream& os, simple_matrix_base<T> const & x)
+{
+  for(size_t i = 0 ; i < (size_t)x.size1() ; i++){
+    for(size_t j = 0; j < (size_t)x.size2() ; j++)
+      os << ((j>0)?",":"") << x(i,j);
+    os << std::endl;
+  }
+  return os;
+}
+
 /*------ Initializer ---------*/
 
 template<class T>
@@ -196,15 +208,30 @@ bool diff(T a, T b, T epsilon, typename std::enable_if<std::is_arithmetic<T>::va
 template<class VecType1, class VecType2>
 bool diff(VecType1 const & x, VecType2 const & y, typename VecType1::value_type epsilon)
 {
+  assert((size_t)x.size()==(size_t)y.size());
   typedef typename VecType1::value_type T;
   T max = 0;
   for(int_t i = 0 ; i < (int_t)x.size() ; ++i)
   {
-    if(diff(x[i], y[i], epsilon))
+    if(diff(x[i], y[i], epsilon)){
+//      std::cout << i << " " << x[i] << " " << y[i] << std::endl;
       return true;
+    }
   }
   return false;
 }
+
+template<class VecType>
+bool diff(VecType const & x, isaac::array const & iy, typename VecType::value_type epsilon)
+{
+  VecType y(x.size());
+  isaac::copy(iy, y);
+  return diff(x, y, epsilon);
+}
+
+template<class VecType>
+bool diff(isaac::array const & x, VecType const & y, typename VecType::value_type epsilon)
+{ return diff(y, x, epsilon); }
 
 #define INIT_VECTOR(N, SUBN, START, STRIDE, CPREFIX, PREFIX, CTX) \
     simple_vector<T> CPREFIX(N);\

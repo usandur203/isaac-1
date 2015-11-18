@@ -683,8 +683,8 @@ array diag(array_base & x, int offset)
   assert(x.dim()==2 && "Input must be 2-d");
   int_t offi = -(offset<0)*offset, offj = (offset>0)*offset;
   int_t size = std::min(x.shape()[0] - offi, x.shape()[1] - offj);
-  int_t start = offi + x.shape()[1]*offj;
-  return array(size, x.dtype(), x.data(), start, x.shape()[1]+1);
+  int_t start = offi + x.stride()[1]*offj;
+  return array(size, x.dtype(), x.data(), start, x.stride()[1]+1);
 }
 
 

@@ -16,7 +16,6 @@ class view;
 
 class ISAACAPI array_base
 {
-private:
   int_t dsize();
 public:
   //1D Constructors
