@@ -52,7 +52,7 @@ struct slice
 
   int_t size(int_t bound) const
   {
-    int_t effective_end = (end < 0)?bound - (end + 1):end;
+    int_t effective_end = (end < 0)?bound - std::abs(end + 1):end;
     return (effective_end - start)/stride;
   }
 

@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cassert>
 
 #include "isaac/array.h"
 #include "isaac/algorithms/householder.h"
@@ -18,6 +19,12 @@ namespace isaac
     return b >= 0 ? x : -x;
   }
 
+  double dabs(float x)
+  { return std::abs((double)x); }
+
+  double dsqrt(float x)
+  { return std::sqrt((double)x); }
+
   void larfg(view x, float* tau, float* a)
   {
     float xnorm = value_scalar(norm(x));
@@ -27,12 +34,12 @@ namespace isaac
     {
       float alpha = *a;
       float sign = alpha>=0?1:-1;
-      float beta = -sign*std::sqrt(alpha*alpha + xnorm*xnorm);
+      float beta = -sign*dsqrt(alpha*alpha + xnorm*xnorm);
       float safmin = lamch<float>('S')/lamch<float>('E');
-      if(std::abs(beta) < safmin)
+      if(dabs(beta) < safmin)
       {
         int knt = 0;
-        while(std::abs(beta) < safmin){
+        while(dabs(beta) < safmin){
           x /= safmin;
           beta /= safmin;
           alpha /= safmin;
@@ -40,7 +47,7 @@ namespace isaac
         }
         xnorm = value_scalar(norm(x));
         sign = alpha>=0?1:-1;
-        beta = -sign*std::sqrt(alpha*alpha + xnorm*xnorm);
+        beta = -sign*dsqrt(alpha*alpha + xnorm*xnorm);
         for(int j = 0 ; j < knt ; ++j)
           alpha *= safmin;
       }
@@ -203,15 +210,28 @@ namespace isaac
 
   void orgbr(char flag, array_base& A, int_t K, float* tau)
   {
+      int_t M = A.shape()[0];
+      int_t N = A.shape()[1];
       if(flag=='Q'){
-        orgqr(A({0, end}, {0, end}), K, tau);
+        if(M >= K)
+          orgqr(A({0, end}, {0, end}), K, tau);
+        else
+        {
+          assert(false && "TODO");
+        }
       }
-      else{
-        execute(sfor(_i0 = A.shape()[0] - 2, _i0 >= 0, _i0-=1, assign(row(A, _i0 + 1),row(A, _i0))));
-        A({0, end}, 0) = (float)0;
-        A(0, {0, end}) = (float)0;
-        A(0, 0) = (float)1;
-        orglq(A({1, end}, {1, end}), K-1, tau);
+      else
+      {
+        if(K < N)
+          orglq(A(all,all), K, tau);
+        else
+        {
+          execute(sfor(_i0 = N - 2, _i0 >= 0, _i0-=1, assign(row(A, _i0 + 1),row(A, _i0))));
+          A({0, N}, 0) = (float)0;
+          A(0, {0, N}) = (float)0;
+          A(0, 0) = (float)1;
+          orglq(A({1, N}, {1, N}), N-1, tau);
+        }
       }
   }
 
@@ -223,12 +243,11 @@ namespace isaac
   {
       using std::min;
       using std::max;
-      using std::abs;
       using std::sqrt;
 
-      float fa = abs(f);
-      float ga = abs(g);
-      float ha = abs(h);
+      float fa = dabs(f);
+      float ga = dabs(g);
+      float ha = dabs(h);
       float fhmn = min(fa, ha);
       float fhmx = max(fa, ha);
       if(fhmn==0)
@@ -238,7 +257,7 @@ namespace isaac
               *ssmax = 0;
           else{
               float d1 = min(fhmx, ha) / max(fhmx, ga);
-              *ssmax = max(fhmx, ga)*sqrt(d1*d1 + 1);
+              *ssmax = max(fhmx, ga)*dsqrt(d1*d1 + 1.);
           }
       }
       else
@@ -249,7 +268,7 @@ namespace isaac
               float at = (fhmx - fhmn)/fhmx;
               float d1 = ga/fhmx;
               float au = d1*d1;
-              float c = 2./(sqrt(as*as + au) + sqrt(at*at + au));
+              float c = 2./(dsqrt(as*as + au) + dsqrt(at*at + au));
               *ssmin = fhmn*c;
               *ssmax = fhmx/c;
           }
@@ -265,7 +284,7 @@ namespace isaac
                   float at = (fhmx - fhmn)/fhmx;
                   float d1 = as*au;
                   float d2 = at*au;
-                  float c = 1./(sqrt(d1*d1 + 1.) + sqrt(d2*d2 + 1.));
+                  float c = 1./(dsqrt(d1*d1 + 1.) + dsqrt(d2*d2 + 1.));
                   *ssmin = fhmn*c*au;
                   *ssmin += *ssmin;
                   *ssmax = ga/(c + c);
@@ -287,7 +306,7 @@ namespace isaac
       static bool gasmal;
 
       float ft = f, ht = h, gt = g;
-      float fa = abs(ft), ha = abs(ht), ga = abs(gt);
+      float fa = dabs(ft), ha = dabs(ht), ga = dabs(gt);
 
       /* PMAX points to the maximum absolute element of matrix
          PMAX = 1 if F largest in absolute values
@@ -342,9 +361,9 @@ namespace isaac
               /* Note that T .ge. 1 */
               float mm = m * m;
               float tt = t * t;
-              float s = sqrt(tt + mm);
+              float s = dsqrt(tt + mm);
               /* Note that 1 .le. S .le. 1 + 1/macheps */
-              float r = (l==0)?abs(m):sqrt(l*l + mm);
+              float r = (l==0)?abs(m):dsqrt(l*l + mm);
               /* Note that 0 .le. R .le. 1 + 1/macheps */
               float a = (s + r) * .5;
               /* Note that 1 .le. A .le. 1 + abs(M) */
@@ -360,7 +379,7 @@ namespace isaac
               else {
                   t = (m / (s + t) + m / (r + l)) * (a + 1.);
               }
-              l = sqrt(t * t + 4.);
+              l = dsqrt(t * t + 4.);
               crt = 2. / l;
               srt = t / l;
               clt = (crt + srt * m) / a;
@@ -432,7 +451,7 @@ namespace isaac
                 g1*=safmn2;
                 scale = max(abs(f1), abs(g1));
             }
-            *r = sqrt((f1*f1 + g1*g1));
+            *r = dsqrt((f1*f1 + g1*g1));
             *cs = f1 / *r;
             *sn = g1 / *r;
             for(int i = 0 ; i < count ; ++i)
@@ -449,7 +468,7 @@ namespace isaac
                 g1 *= safmx2;
                 scale = max(abs(f1), abs(g1));
             }
-            *r = sqrt(f1*f1 + g1*g1);
+            *r = dsqrt(f1*f1 + g1*g1);
             *cs = f1 / *r;
             *sn = g1 / *r;
             for(int i = 0 ; i < count ; ++i)
@@ -457,7 +476,7 @@ namespace isaac
         }
         else
         {
-            *r = sqrt(f1*f1 + g1*g1);
+            *r = dsqrt(f1*f1 + g1*g1);
             *cs = f1 / *r;
             *sn = g1 / *r;
         }
@@ -511,7 +530,7 @@ namespace isaac
             mu = abs((double)d[i])*(mu / (mu + abs(e[i-1])));
             sminoa = min(sminoa, mu);
         }
-        sminoa /= sqrt((float)N);
+        sminoa /= dsqrt(N);
         thresh = max(tol*sminoa, maxit*unfl);
     }
     else{

@@ -214,7 +214,7 @@ bool diff(VecType1 const & x, VecType2 const & y, typename VecType1::value_type 
   for(int_t i = 0 ; i < (int_t)x.size() ; ++i)
   {
     if(diff(x[i], y[i], epsilon)){
-//      std::cout << i << " " << x[i] << " " << y[i] << std::endl;
+      std::cout << i << " " << x[i] << " " << y[i] << std::endl;
       return true;
     }
   }
