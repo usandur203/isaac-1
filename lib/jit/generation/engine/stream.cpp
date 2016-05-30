@@ -69,9 +69,9 @@ ADD_KEYWORD("GROUP_IDX_0", "get_group_id(0)", "blockIdx.x")
 ADD_KEYWORD("GROUP_IDX_1", "get_group_id(1)", "blockIdx.y")
 ADD_KEYWORD("GROUP_IDX_2", "get_group_id(2)", "blockIdx.z")
 
-ADD_KEYWORD("GROUP_SIZE_0", "get_num_groups(0)", "GridDim.x")
-ADD_KEYWORD("GROUP_SIZE_1", "get_num_groups(1)", "GridDim.y")
-ADD_KEYWORD("GROUP_SIZE_2", "get_num_groups(2)", "GridDim.z")
+ADD_KEYWORD("GROUP_SIZE_0", "get_num_groups(0)", "gridDim.x")
+ADD_KEYWORD("GROUP_SIZE_1", "get_num_groups(1)", "gridDim.y")
+ADD_KEYWORD("GROUP_SIZE_2", "get_num_groups(2)", "gridDim.z")
 
 ADD_KEYWORD("LOCAL_BARRIER", "barrier(CLK_LOCAL_MEM_FENCE)", "__syncthreads()")
 ADD_KEYWORD("LOCAL_PTR", "__local", "")

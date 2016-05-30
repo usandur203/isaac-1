@@ -164,6 +164,10 @@ std::string to_string(expression_tree::node const & e);
 std::ostream & operator<<(std::ostream & os, expression_tree::node const & s_node);
 std::string to_string(isaac::expression_tree const & s);
 
+//
+class view;
+view retrieve_array(driver::backend_type backend, expression_tree::node const & node);
+
 }
 
 #endif

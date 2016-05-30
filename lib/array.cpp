@@ -339,6 +339,7 @@ view::view(array_base & data) : array_base(data){}
 view::view(array_base& data, slice const & s1) : array_base(data, s1) {}
 view::view(array_base& data, slice const & s1, slice const & s2) : array_base(data, s1, s2) {}
 view::view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc) : array_base(size1, dtype, data, start, inc) {}
+view::view(tuple const & shape, numeric_type dtype, int_t start, tuple const & stride, driver::Buffer const & data) : array_base(shape, dtype, start, stride, data) {}
 
 
 //---------------------------------------

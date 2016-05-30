@@ -24,6 +24,7 @@
 #include "isaac/jit/syntax/engine/process.h"
 #include "isaac/jit/generation/matrix_product.h"
 #include "isaac/jit/generation/engine/keywords.h"
+#include "isaac/runtime/execute.h"
 #include "isaac/exception/api.h"
 #include "tools/arguments.hpp"
 #include "tools/vector_types.hpp"
@@ -165,7 +166,8 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
         break;
     }
 
-    stream << "$KERNEL void matrix_product" << suffix << "($SIZE_T M, $SIZE_T N, $SIZE_T K, "
+    stream << "$KERNEL void __launch_bounds__(" << p_.local_size_0*p_.local_size_1 << ") "
+           << "matrix_product" << suffix << "($SIZE_T M, $SIZE_T N, $SIZE_T K, "
                                << "$GLOBAL " << sdtype << "* C, $SIZE_T ldc, $SIZE_T offc, $SIZE_T Cstride1, "
                                << sdtype << " alpha,"
                                << "$GLOBAL " << sdtype << "* A, $SIZE_T lda, $SIZE_T offa, $SIZE_T Astride1,"
@@ -213,7 +215,7 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
     if(has_depth)
     {
       stream << "gidz = $GROUP_IDX_2;" << std::endl;
-      stream << "div = (K+" << p_.depth-1 << ")/" << p_.depth << ";" << std::endl;
+      stream << "div = (K + $GROUP_SIZE_2 - 1)/$GROUP_SIZE_2;" << std::endl;
       stream << "offz = div*gidz;" << std::endl;
       stream << "K = max(0,min(K - div*gidz, ($SIZE_T)div));" << std::endl;
     }
@@ -512,8 +514,6 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
     stream << "C += ids.z*" << p_.simd_width << CSTRIDE1 << ";" << std::endl;
     stream << "C += ids.y*ldc;" << std::endl;
     stream << "C += ids.w*" << p_.simd_width << "*ldc;" << std::endl;
-    if(has_depth)
-        stream << "C += gidz*ldc*N;" << std::endl;
 
     stream << "M -= ids.x;" << std::endl;
     stream << "M -= ids.z*" << p_.simd_width << ";" << std::endl;
@@ -532,7 +532,7 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
             string Ci = to_string((m/p_.simd_width)*(p_.local_size_0*p_.simd_width) + m%p_.simd_width);
             stream << "if(" << Ci << "< M) ";
             if(has_depth)
-                stream << "C[" << Ci << CSTRIDE1 << "] = rC[" << m << "][" << n << "];" << std::endl;
+                stream << "atomicAdd(&C[" << Ci << CSTRIDE1 << "], rC[" << m << "][" << n << "]);" << std::endl;
             else
                 stream << "C[" << Ci << CSTRIDE1 << "] = rC[" << m << "][" << n << "] + ((beta != (" << sdtype << ")0)?(beta*" << "C[" << Ci << CSTRIDE1 << "]):0);" << std::endl;
         }
@@ -548,37 +548,6 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
     stream.dec_tab();
     stream << "}" << std::endl;
 
-    if(has_depth)
-    {
-      stream << "$KERNEL void reduce" << suffix << "($SIZE_T M, $SIZE_T N, $SIZE_T D, "
-                                 << "$GLOBAL " << sdtype << "* Z, $SIZE_T Zld,"
-                                 << "$GLOBAL " << sdtype << "* C, $SIZE_T ldc, $SIZE_T Cstart, $SIZE_T Cstride,"
-                                 << sdtype << " beta)"
-                                 << std::endl;
-      stream << "{" << std::endl;
-      stream.inc_tab();
-
-      stream << "C += Cstart;" << std::endl;
-      stream << "for(unsigned int i = $GLOBAL_IDX_0 ;  i < M ;  i += $GLOBAL_SIZE_0)" << std::endl;
-      stream << "{" << std::endl;
-      stream.inc_tab();
-      stream << "for(unsigned int j = $GLOBAL_IDX_1 ;  j < N ;  j += $GLOBAL_SIZE_1)" << std::endl;
-      stream << "{" << std::endl;
-      stream.inc_tab();
-      stream << sdtype << " acc = 0;" << std::endl;
-      stream << "for(unsigned int k = 0 ;  k < D ;  k++)" << std::endl;
-      stream.inc_tab();
-      stream << "acc += Z[i + j*Zld + k*Zld*N];" << std::endl;
-      stream.dec_tab();
-      stream << "C[i*Cstride + j*ldc] = acc + beta*C[i*Cstride + j*ldc];" << std::endl;
-      stream.dec_tab();
-      stream << "}" << std::endl;
-      stream.dec_tab();
-      stream << "}" << std::endl;
-
-      stream.dec_tab();
-      stream << "}" << std::endl;
-    }
 
     return stream.str();
 
@@ -606,34 +575,33 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
 
     driver::Kernel matrix_product(program, matrix_product_name.c_str());
     driver::NDRange local(p_.local_size_0, p_.local_size_1, 1);
-    driver::NDRange global(align(align(M,p_.mS)/p_.mS, p_.local_size_0), align(align(N,p_.nS)/p_.nS, p_.local_size_1), p_.depth);
+    driver::NDRange global(align(align(M,p_.mS)/p_.mS, p_.local_size_0), align(align(N,p_.nS)/p_.nS, p_.local_size_1), std::min(K, (int_t)p_.depth));
 
     unsigned int current_arg = 0;
 
-    driver::Buffer& workspace = driver::backend::workspaces::get(options.queue(queue.context()));
+    if(p_.depth > 1)
+    {
+        view Cv = retrieve_array(queue.backend(), C);
+        if((float)beta)
+            runtime::execute(runtime::execution_handler(assign(Cv, beta*Cv), options));
+        else
+            runtime::execute(runtime::execution_handler(assign(Cv, 0), options));
+    }
+
     matrix_product.setSizeArg(current_arg++, M);
     matrix_product.setSizeArg(current_arg++, N);
     matrix_product.setSizeArg(current_arg++, K);
-    if(p_.depth==1)
-    {
-        if(backend==driver::OPENCL)
-          matrix_product.setArg(current_arg++, C.array.handle.cl);
-        else
-          matrix_product.setArg(current_arg++, C.array.handle.cu);
-        matrix_product.setSizeArg(current_arg++, C.ld[1]);
-        matrix_product.setSizeArg(current_arg++, C.array.start);
-        matrix_product.setSizeArg(current_arg++, C.ld[0]);
-    }
+    //C
+    if(backend==driver::OPENCL)
+      matrix_product.setArg(current_arg++, C.array.handle.cl);
     else
-    {
-        matrix_product.setArg(current_arg++, workspace);
-        matrix_product.setSizeArg(current_arg++, M);
-        matrix_product.setSizeArg(current_arg++, 0);
-        matrix_product.setSizeArg(current_arg++, 1);
-    }
-
-
+      matrix_product.setArg(current_arg++, C.array.handle.cu);
+    matrix_product.setSizeArg(current_arg++, C.ld[1]);
+    matrix_product.setSizeArg(current_arg++, C.array.start);
+    matrix_product.setSizeArg(current_arg++, C.ld[0]);
+    //alpha
     matrix_product.setArg(current_arg++, alpha);
+    //A
     if(backend==driver::OPENCL)
       matrix_product.setArg(current_arg++, A.array.handle.cl);
     else
@@ -641,7 +609,7 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
     matrix_product.setSizeArg(current_arg++, A.ld[1]);
     matrix_product.setSizeArg(current_arg++, A.array.start);
     matrix_product.setSizeArg(current_arg++, A.ld[0]);
-
+    //B
     if(backend==driver::OPENCL)
       matrix_product.setArg(current_arg++, B.array.handle.cl);
     else
@@ -649,32 +617,9 @@ matrix_product_parameters::matrix_product_parameters(unsigned int simd_width
     matrix_product.setSizeArg(current_arg++, B.ld[1]);
     matrix_product.setSizeArg(current_arg++, B.array.start);
     matrix_product.setSizeArg(current_arg++, B.ld[0]);
-
+    //beta
     matrix_product.setArg(current_arg++, beta);
     options.enqueue(program.context(), matrix_product, global, local);
-
-    if(p_.depth > 1)
-    {
-      unsigned int current_arg = 0;
-      driver::Kernel reduce(program, reduce_name.c_str());
-      driver::NDRange local(p_.local_size_0, p_.local_size_1);
-      driver::NDRange global(align(M, p_.local_size_0), align(N, p_.local_size_1));
-      reduce.setSizeArg(current_arg++, M);
-      reduce.setSizeArg(current_arg++, N);
-      reduce.setSizeArg(current_arg++, p_.depth);
-      reduce.setArg(current_arg++, workspace);
-      reduce.setSizeArg(current_arg++, M);
-      if(backend==driver::OPENCL)
-        reduce.setArg(current_arg++, C.array.handle.cl);
-      else
-        reduce.setArg(current_arg++, C.array.handle.cu);
-      reduce.setSizeArg(current_arg++, C.ld[1]);
-      reduce.setSizeArg(current_arg++, C.array.start);
-      reduce.setSizeArg(current_arg++, C.ld[0]);
-      reduce.setArg(current_arg++, beta);
-      options.enqueue(program.context(), reduce, global, local);
-    }
-
   }
 
   std::vector<int_t> matrix_product::infos(expression_tree const & tree, symbolic::preset::matrix_product::args& arguments) const

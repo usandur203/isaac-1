@@ -207,4 +207,13 @@ std::string to_string(isaac::expression_tree const & s)
   return os.str();
 }
 
+view retrieve_array(driver::backend_type backend, expression_tree::node const & node)
+{
+  if(backend==driver::OPENCL)
+      return view(node.shape, node.dtype, node.array.start, node.ld, driver::Buffer(node.array.handle.cl, false));
+  else
+      return view(node.shape, node.dtype, node.array.start, node.ld, driver::Buffer(node.array.handle.cu, false));
+}
+
+
 }

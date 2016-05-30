@@ -154,6 +154,8 @@ public:
   view(array_base& data, slice const & s1);
   view(array_base& data, slice const & s1, slice const & s2);
   view(int_t size1, numeric_type dtype, driver::Buffer data, int_t start, int_t inc);
+  view(tuple const & shape, numeric_type dtype, int_t start, tuple const & stride, driver::Buffer const & data);
+
   using array_base::operator=;
 };
 
