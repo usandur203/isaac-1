@@ -119,6 +119,7 @@ public:
     static cl_int clReleaseKernel(cl_kernel);
 
     //CUDA
+    static CUresult cuCtxGetCurrent(CUcontext *pctx);
     static CUresult cuCtxDestroy_v2(CUcontext ctx);
     static CUresult cuEventCreate(CUevent *phEvent, unsigned int Flags);
     static CUresult cuDeviceGet(CUdevice *device, int ordinal);
@@ -205,6 +206,7 @@ private:
     static void* clReleaseKernel_;
 
     //CUDA
+    static void* cuCtxGetCurrent_;
     static void* cuCtxDestroy_v2_;
     static void* cuEventCreate_;
     static void* cuDeviceGet_;

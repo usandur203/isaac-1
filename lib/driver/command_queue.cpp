@@ -20,6 +20,7 @@
  */
 
 #include <iostream>
+#include <cassert>
 
 #include "isaac/driver/backend.h"
 #include "isaac/driver/command_queue.h"
@@ -39,12 +40,18 @@ namespace isaac
 namespace driver
 {
 
+CommandQueue::CommandQueue(Context const & ctx, CUstream stream, bool take_ownership): backend_(CUDA), context_(ctx), device_(ctx.device()), h_(backend_, take_ownership)
+{
+  h_.cu() = stream;
+  assert(ctx.backend()==CUDA);
+}
+
 CommandQueue::CommandQueue(cl_command_queue const & queue, bool take_ownership) : backend_(OPENCL), context_(backend::contexts::import(ocl::info<CL_QUEUE_CONTEXT>(queue))), device_(ocl::info<CL_QUEUE_DEVICE>(queue), false), h_(backend_, take_ownership)
 {
   h_.cl() = queue;
 }
 
-CommandQueue::CommandQueue(Context const & context, Device const & device, cl_command_queue_properties properties): backend_(device.backend_), context_(context), device_(device), h_(backend_, true)
+CommandQueue::CommandQueue(Context const & context, cl_command_queue_properties properties): backend_(context.backend()), context_(context), device_(context.device()), h_(backend_, true)
 {
   switch(backend_)
   {
@@ -57,7 +64,7 @@ CommandQueue::CommandQueue(Context const & context, Device const & device, cl_co
     case OPENCL:
     {
       cl_int err;
-      h_.cl() = dispatch::clCreateCommandQueue(context.h_.cl(), device.h_.cl(), properties, &err);
+      h_.cl() = dispatch::clCreateCommandQueue(context.h_.cl(), device_.h_.cl(), properties, &err);
       check(err);
       break;
     }

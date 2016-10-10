@@ -27,44 +27,36 @@ namespace sc = isaac;
 using sc::driver::Buffer;
 using sc::assign;
 
-extern "C"
+//Opaque context structure
+class cublasContext
 {
-
-struct cublasContext
-{
+public:
+  cublasContext(sc::driver::Context const & ctx);
+  sc::driver::CommandQueue const & queue() const;
+  sc::driver::Context const & context() const;
+  void update(CUstream stream);
+private:
+  sc::driver::CommandQueue init_queue_; //Keeps ownership of allocated handle even when inactive
+  sc::driver::CommandQueue active_queue_;
 };
 
-static cublasHandle_t dft_handle = cublasHandle_t();
+cublasContext::cublasContext(sc::driver::Context const & ctx): init_queue_(ctx), active_queue_(init_queue_)
+{ }
 
-cublasStatus cublasInit()
-{
-  return CUBLAS_STATUS_SUCCESS;
-}
+sc::driver::CommandQueue const & cublasContext::queue() const
+{ return active_queue_; }
 
-cublasStatus cublasShutdown()
-{
-  isaac::runtime::profiles::release();
-  isaac::driver::backend::release();
-  return CUBLAS_STATUS_SUCCESS;
-}
+sc::driver::Context const & cublasContext::context() const
+{ return active_queue_.context(); }
 
-cublasStatus_t cublasCreate_v2 (cublasHandle_t *handle)
-{
-  *handle = new cublasContext();
-  return CUBLAS_STATUS_SUCCESS;
-}
+void cublasContext::update(CUstream stream)
+{ active_queue_ = sc::driver::CommandQueue(context(), stream, false); }
 
-cublasStatus_t cublasDestroy_v2 (cublasHandle_t handle)
-{
-  delete handle;
-  return cublasShutdown();
-}
 
-static cublasStatus_t execute(cublasHandle_t, sc::expression_tree const & op)
+
+//Actual functions implementation
+extern "C"
 {
-  sc::runtime::execute(op);
-  return CUBLAS_STATUS_SUCCESS;
-}
 
 inline cublasOperation_t cvt_trans(char c)
 {
@@ -73,6 +65,69 @@ inline cublasOperation_t cvt_trans(char c)
   return CUBLAS_OP_C;
 }
 
+inline cublasHandle_t alloc_default_handle()
+{ return new cublasContext(sc::driver::backend::contexts::get_default()); }
+
+static cublasHandle_t dft_handle = alloc_default_handle();
+
+cublasStatus cublasInit()
+{
+  if(!dft_handle)
+    dft_handle = alloc_default_handle();
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+cublasStatus cublasShutdown()
+{
+  cublasDestroy_v2(dft_handle);
+  isaac::runtime::profiles::release();
+  isaac::driver::backend::release();
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+//*****************
+//Context
+//*****************
+
+cublasStatus_t cublasCreate_v2 (cublasHandle_t *handle)
+{
+  CUcontext ctx;
+  sc::driver::dispatch::cuCtxGetCurrent(&ctx);
+  *handle = new cublasContext(sc::driver::Context(ctx, false));
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+cublasStatus_t cublasDestroy_v2 (cublasHandle_t handle)
+{
+  if(handle){
+    delete handle;
+    handle = 0;
+  }
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+//*****************
+//Stream
+//*****************
+
+cublasStatus_t cublasSetStream_v2(cublasHandle_t handle, cudaStream_t streamId)
+{
+  handle->update((CUstream)streamId);
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+cublasStatus_t cublasGetStream_v2(cublasHandle_t handle, cudaStream_t *streamId)
+{
+  *streamId = (cudaStream_t)handle->queue().handle().cu();
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+static cublasStatus_t execute(cublasHandle_t handle, sc::expression_tree const & operation)
+{
+  sc::runtime::execution_options_type options(handle->queue());
+  sc::runtime::execute(sc::runtime::execution_handler(operation, options));
+  return CUBLAS_STATUS_SUCCESS;
+}
 
 //*****************
 //BLAS1

@@ -100,8 +100,10 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
   };
   bool modify_output = std::find_if(tree.data().begin(), tree.data().end(), read_out) != tree.data().end();
   std::unique_ptr<array> bkp;
-  if(modify_output)
-    bkp.reset(new array(*out));
+  if(modify_output){
+    bkp.reset(new array(out->shape(), out->dtype(), queue_.context()));
+    *bkp = execution_handler(-(-*out), execution_options_type(queue_));
+  }
   tools::Timer tmr;
   std::vector<double> times;
   std::vector<float> perf = predictor_->predict(x);
@@ -134,7 +136,7 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
   size_t i = idx[std::distance(times.begin(),std::min_element(times.begin(), times.end()))];
   labels_.insert({x, i});
   if(modify_output)
-    *out = *bkp;
+    *out = execution_handler(-(-*bkp), execution_options_type(queue_));
   templates_[i]->enqueue(queue_, program, tools::to_string(i), expr);
 }
 

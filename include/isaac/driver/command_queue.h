@@ -48,8 +48,9 @@ public:
 
 public:
   //Constructors
+  CommandQueue(Context const & ctx, CUstream stream, bool take_ownership = true);
   CommandQueue(cl_command_queue const & queue, bool take_ownership = true);
-  CommandQueue(Context const & context, Device const & device, cl_command_queue_properties properties = 0);
+  CommandQueue(Context const & context, cl_command_queue_properties properties = 0);
   //Accessors
   handle_type & handle();
   handle_type const & handle() const;

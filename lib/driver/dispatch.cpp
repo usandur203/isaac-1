@@ -202,6 +202,7 @@ CUDA_DEFINE1(CUresult, cuEventDestroy_v2, CUevent)
 CUDA_DEFINE2(CUresult, cuMemAlloc_v2, CUdeviceptr*, size_t)
 CUDA_DEFINE3(CUresult, cuPointerGetAttribute, void*, CUpointer_attribute, CUdeviceptr)
 CUDA_DEFINE1(CUresult, cuCtxGetDevice, CUdevice*)
+CUDA_DEFINE1(CUresult, cuCtxGetCurrent, CUcontext*)
 
 NVRTC_DEFINE3(nvrtcResult, nvrtcCompileProgram, nvrtcProgram, int, const char **)
 NVRTC_DEFINE2(nvrtcResult, nvrtcGetProgramLogSize, nvrtcProgram, size_t *)
@@ -294,6 +295,7 @@ void* dispatch::clCreateProgramWithSource_;
 void* dispatch::clReleaseKernel_;
 
 //CUDA
+void* dispatch::cuCtxGetCurrent_;
 void* dispatch::cuCtxDestroy_v2_;
 void* dispatch::cuEventCreate_;
 void* dispatch::cuDeviceGet_;
