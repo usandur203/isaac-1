@@ -85,59 +85,62 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
   std::vector<int_t> x = templates_[0]->input_sizes(tree);
 
   //Cached
+  size_t label = 0;
   auto it = labels_.find(x);
-  if(it!=labels_.end()){
-    templates_[it->second]->enqueue(queue_, program, tools::to_string(it->second), expr);
-    return;
-  }
-
+  if(it!=labels_.end())
+    label = it->second;
   //Not cached
-  expression_tree::node const & root = tree[tree.root()];
-  expression_tree::node const & left = tree[root.binary_operator.lhs];
-  array_base* out = left.array.base;
-  auto read_out = [&](expression_tree::node const & x){
-    return x.type == DENSE_ARRAY_TYPE && (&x != &left) && x.array.base == out;
-  };
-  bool modify_output = std::find_if(tree.data().begin(), tree.data().end(), read_out) != tree.data().end();
-  std::unique_ptr<array> bkp;
-  if(modify_output){
-    bkp.reset(new array(out->shape(), out->dtype(), queue_.context()));
-    *bkp = execution_handler(-(-*out), execution_options_type(queue_));
-  }
-  tools::Timer tmr;
-  std::vector<double> times;
-  std::vector<float> perf = predictor_->predict(x);
-  std::vector<size_t> idx(perf.size());
-  std::iota(idx.begin(), idx.end(), 0);
-  std::sort(idx.begin(), idx.end(), [&perf](size_t i1, size_t i2) {return perf[i1] > perf[i2];});
-  bool valid_found = false;
-  for(size_t k = 0 ; k < std::min<size_t>(5, idx.size()) || !valid_found ; k++){
-    size_t i = idx[k];
-    if(templates_[i]->temporary_workspace(tree) > MAX_TEMPORARY_WORKSPACE){
-      times.push_back(INFINITY);
-      continue;
+  else if(predictor_)
+  {
+    expression_tree::node const & root = tree[tree.root()];
+    expression_tree::node const & left = tree[root.binary_operator.lhs];
+    array_base* out = left.array.base;
+    auto read_out = [&](expression_tree::node const & x){
+      return x.type == DENSE_ARRAY_TYPE && (&x != &left) && x.array.base == out;
+    };
+    bool modify_output = std::find_if(tree.data().begin(), tree.data().end(), read_out) != tree.data().end();
+    std::unique_ptr<array> bkp;
+    if(modify_output){
+      bkp.reset(new array(out->shape(), out->dtype(), queue_.context()));
+      *bkp = execution_handler(-(-*out), execution_options_type(queue_));
     }
-    try{
-      double total_time = 0;
-      std::vector<double> ctimes;
-      while(total_time < 1e-2){
-        tmr.start();
-        templates_[i]->enqueue(queue_, program, tools::to_string(i), runtime::execution_handler(tree));
-        queue_.synchronize();
-        ctimes.push_back(1e-9*tmr.get().count());
-        total_time += ctimes.back();
+    tools::Timer tmr;
+    std::vector<double> times;
+    std::vector<float> perf = predictor_->predict(x);
+    std::vector<size_t> idx(perf.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    std::sort(idx.begin(), idx.end(), [&perf](size_t i1, size_t i2) {return perf[i1] > perf[i2];});
+    bool valid_found = false;
+    for(size_t k = 0 ; k < std::min<size_t>(5, idx.size()) || !valid_found ; k++){
+      size_t i = idx[k];
+      if(templates_[i]->temporary_workspace(tree) > MAX_TEMPORARY_WORKSPACE){
+        times.push_back(INFINITY);
+        continue;
       }
-      times.push_back( *std::min_element(ctimes.begin(), ctimes.end()));
-      valid_found = true;
-    }catch(...){
-      times.push_back(INFINITY);
+      try{
+        double total_time = 0;
+        std::vector<double> ctimes;
+        while(total_time < 1e-2){
+          tmr.start();
+          templates_[i]->enqueue(queue_, program, tools::to_string(i), runtime::execution_handler(tree));
+          queue_.synchronize();
+          ctimes.push_back(1e-9*tmr.get().count());
+          total_time += ctimes.back();
+        }
+        times.push_back( *std::min_element(ctimes.begin(), ctimes.end()));
+        valid_found = true;
+      }catch(...){
+        times.push_back(INFINITY);
+      }
     }
+    label = idx[std::distance(times.begin(),std::min_element(times.begin(), times.end()))];
+    if(modify_output)
+      *out = execution_handler(-(-*bkp), execution_options_type(queue_));
+    labels_.insert({x, label});
   }
-  size_t i = idx[std::distance(times.begin(),std::min_element(times.begin(), times.end()))];
-  labels_.insert({x, i});
-  if(modify_output)
-    *out = execution_handler(-(-*bkp), execution_options_type(queue_));
-  templates_[i]->enqueue(queue_, program, tools::to_string(i), expr);
+  if(templates_[label]->temporary_workspace(expr.x()) > MAX_TEMPORARY_WORKSPACE)
+    throw operation_not_supported_exception("Running this operation would require an overly large temporary.");
+  templates_[label]->enqueue(queue_, program, tools::to_string(label), expr);
 }
 
 profiles::value_type::templates_container const & profiles::value_type::templates() const

@@ -66,9 +66,9 @@ namespace detail
     return res;
   }
 
-  std::shared_ptr< sc::driver::CommandQueue> create_queue(sc::driver::Context const & context, sc::driver::Device const & device)
+  std::shared_ptr< sc::driver::CommandQueue> create_queue(sc::driver::Context const & context)
   {
-      return std::shared_ptr<sc::driver::CommandQueue>(new sc::driver::CommandQueue(context, device));
+      return std::shared_ptr<sc::driver::CommandQueue>(new sc::driver::CommandQueue(context));
   }
 
 
@@ -172,7 +172,7 @@ void export_driver()
       .add_property("backend", &sc::driver::Context::backend)
       ;
 
-  bp::class_<sc::driver::CommandQueue>("command_queue", bp::init<sc::driver::Context const &, sc::driver::Device const &>())
+  bp::class_<sc::driver::CommandQueue>("command_queue", bp::init<sc::driver::Context const &>())
       .def("synchronize", &sc::driver::CommandQueue::synchronize)
       .add_property("profiles", bp::make_function(&rt::profiles::get, bp::return_internal_reference<>()))
       .add_property("device", bp::make_function(&sc::driver::CommandQueue::device, bp::return_internal_reference<>()))
