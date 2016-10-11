@@ -70,7 +70,7 @@ inline cublasOperation_t cvt_trans(char c)
 inline cublasHandle_t alloc_default_handle()
 { return new cublasContext(sc::driver::backend::queues::get_default()); }
 
-static cublasHandle_t dft_handle = alloc_default_handle();
+static cublasHandle_t dft_handle = NULL;
 
 cublasStatus cublasInit()
 {
@@ -126,6 +126,8 @@ cublasStatus_t cublasGetStream_v2(cublasHandle_t handle, cudaStream_t *streamId)
 
 static cublasStatus_t execute(cublasHandle_t handle, sc::expression_tree const & operation)
 {
+  if(handle==NULL)
+    handle = alloc_default_handle();
   sc::runtime::execution_options_type options(handle->queue());
   sc::runtime::execute(sc::runtime::execution_handler(operation, options));
   return CUBLAS_STATUS_SUCCESS;
