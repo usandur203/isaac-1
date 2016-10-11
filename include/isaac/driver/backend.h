@@ -111,6 +111,7 @@ RESTORE_MSVC_WARNING_C4251
   public:
       static void get(Context const &, std::vector<CommandQueue *> &queues);
       static CommandQueue & get(Context const &, unsigned int id = 0);
+      static CommandQueue & get_default();
   private:
 DISABLE_MSVC_WARNING_C4251
       static std::map< Context, std::vector<CommandQueue*> > cache_;

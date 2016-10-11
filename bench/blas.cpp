@@ -40,6 +40,55 @@ double bench(OP const & op, SYNC const & sync)
 }
 
 template<class T>
+void print_vector(std::ostream& os, std::vector<T> const & x, const char * delim){
+  for(unsigned int i = 0 ; i < x.size() ; ++i){
+    os << x[i];
+    if(i<x.size()-1)
+      os << delim;
+  }
+}
+
+void print_header(std::vector<std::string> const & names)
+{
+  std::cout << color_stream(ITALIC) << color_stream(BOLD) ;
+  print_vector(std::cout, names, "\t");
+  std::cout << "\tISAAC";
+#ifdef BENCH_CLBLAS
+  std::cout << "\tclBLAS";
+#endif
+#ifdef BENCH_CBLAS
+  std::cout << "\tBLAS";
+#endif
+#ifdef BENCH_CUBLAS
+  std::cout << "\tcuBLAS";
+#endif
+  std::cout << color_stream(RESET) << std::endl;
+}
+
+template<class T>
+void print_performance(T first, std::vector<sc::int_t> pval,
+                       std::vector<double> times, std::function<double(double)> fn)
+{
+  std::vector<double> perf;
+  std::transform(times.begin(), times.end(), std::back_inserter(perf), fn);
+  //Sort
+  auto fastest = perf;
+  std::sort(fastest.begin(), fastest.end(), std::greater<double>());
+  //Print
+  std::cout << first << "\t";
+  print_vector(std::cout, pval, "\t");
+  //Color
+ for(auto x: perf){
+    std::cout << "\t";
+    if(x/fastest[1] >= 1.05)
+      std::cout << color_stream(FG_LIGHT_BLUE) << x << color_stream(RESET);
+    else
+      std::cout << x;
+  }
+  std::cout << std::endl;
+}
+
+template<class T>
 void bench(sc::numeric_type dtype, std::string operation)
 {
   using std::get;
@@ -51,6 +100,7 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
   auto cusync = [&](){ cudaDeviceSynchronize(); };
 #endif
+  sc::int_t dtsize = sc::size_of(dtype);
   /*---------*/
   /*--BLAS1--*/
   /*---------*/
@@ -58,7 +108,7 @@ void bench(sc::numeric_type dtype, std::string operation)
   if(operation=="axpy")
   {
     float alpha = 1;
-    for(int_t N: create_log_range((int)1e3, (int)1e8, 50, 64))
+    for(int_t N: create_log_range((int)1e3, (int)1e8, 10, 64))
     {
       std::vector<double> times;
       sc::array x(N, dtype), y(N, dtype);
@@ -77,12 +127,13 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
       times.push_back(bench([&](){cublasSaxpy(N, alpha, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
 #endif
+      print_performance(N, {}, times, [&](double t){ return 3*N*dtsize/t;});
     }
   }
 
   if(operation=="dot")
   {
-    for(int_t N: create_log_range((int)1e3, (int)1e8, 50, 64))
+    for(int_t N: create_log_range((int)1e3, (int)1e8, 10, 64))
     {
       std::vector<double> times;
       sc::array x(N, dtype), y(N, dtype);
@@ -103,6 +154,7 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
       times.push_back(bench([&](){cublasSdot(N, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
 #endif
+      print_performance(N, {}, times, [&](double t){ return 2*N*dtsize/t;});
     }
   }
 
@@ -159,6 +211,7 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
       times.push_back(bench([&](){cublasSgemv(AT?'t':'n', As1, As2, 1, (T*)cu(A), lda, (T*)cu(x), 1, 0, (T*)cu(y), 1);}, cusync));
 #endif
+      print_performance(N, {}, times, [&](double t){ return (M*N + M + N)*dtsize/t;});
     }
   }
 
@@ -182,18 +235,7 @@ void bench(sc::numeric_type dtype, std::string operation)
     MNKs.push_back(make_tuple("Lapack",3456,3456,32,'N','T'));
     MNKs.push_back(make_tuple("Lapack",896,896,32,'N','T'));
 
-    std::cout << color_stream(ITALIC) << color_stream(BOLD) ;
-    std::cout << "BENCH\tM\tN\tK\tAT\tBT\tISAAC";
-#ifdef BENCH_CLBLAS
-    std::cout << "\tclBLAS";
-#endif
-#ifdef BENCH_CBLAS
-    std::cout << "\tBLAS";
-#endif
-#ifdef BENCH_CUBLAS
-    std::cout << "\tcuBLAS";
-#endif
-    std::cout << color_stream(RESET) << std::endl;
+    print_header({"BENCH", "M", "N", "K", "AT", "BT"});
 
     /*---------*/
     /*--BLAS3--*/
@@ -239,18 +281,7 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
       times.push_back(bench([&](){cublasSgemm(AT?'t':'n', BT?'t':'n', M, N, K, 1, (T*)cu(A), lda, (T*)cu(B), ldb, 1, (T*)cu(C), ldc);}, cusync));
 #endif
-      std::transform(times.begin(), times.end(), std::back_inserter(tflops), [&](double t){ return 2*M*N*K/t*1e-3;});
-      auto fastest = tflops;
-      std::sort(fastest.begin(), fastest.end(), std::greater<double>());
-      std::cout << name << "\t" << M << "\t" << N << "\t" << K << "\t" << cAT << "\t" << cBT;
-     for(auto x: tflops){
-        std::cout << "\t";
-        if(x/fastest[1] >= 1.05)
-          std::cout << color_stream(FG_LIGHT_BLUE) << x << color_stream(RESET);
-        else
-          std::cout << x;
-      }
-      std::cout << std::endl;
+      print_performance(name, {M, N, K, cAT, cBT}, times, [&](double t){ return 2*M*N*K/t*1e-3;});
     }
   }
 

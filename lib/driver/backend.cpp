@@ -117,6 +117,10 @@ void backend::queues::release()
     cache_.clear();
 }
 
+CommandQueue & backend::queues::get_default()
+{
+  return get(contexts::get_default(), 0);
+}
 
 CommandQueue & backend::queues::get(Context const & context, unsigned int id)
 {

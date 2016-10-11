@@ -31,6 +31,7 @@ using sc::assign;
 class cublasContext
 {
 public:
+  cublasContext(sc::driver::CommandQueue const & queue);
   cublasContext(sc::driver::Context const & ctx);
   sc::driver::CommandQueue const & queue() const;
   sc::driver::Context const & context() const;
@@ -40,8 +41,9 @@ private:
   sc::driver::CommandQueue active_queue_;
 };
 
-cublasContext::cublasContext(sc::driver::Context const & ctx): init_queue_(ctx), active_queue_(init_queue_)
-{ }
+cublasContext::cublasContext(sc::driver::CommandQueue const & queue): init_queue_(queue), active_queue_(init_queue_){ }
+
+cublasContext::cublasContext(sc::driver::Context const & ctx): init_queue_(ctx), active_queue_(init_queue_){ }
 
 sc::driver::CommandQueue const & cublasContext::queue() const
 { return active_queue_; }
@@ -66,7 +68,7 @@ inline cublasOperation_t cvt_trans(char c)
 }
 
 inline cublasHandle_t alloc_default_handle()
-{ return new cublasContext(sc::driver::backend::contexts::get_default()); }
+{ return new cublasContext(sc::driver::backend::queues::get_default()); }
 
 static cublasHandle_t dft_handle = alloc_default_handle();
 
