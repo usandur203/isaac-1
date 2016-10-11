@@ -104,10 +104,10 @@ void bench(sc::numeric_type dtype, std::string operation)
   /*---------*/
   /*--BLAS1--*/
   /*---------*/
-
   if(operation=="axpy")
   {
     float alpha = 1;
+    print_header({"N"});
     for(int_t N: create_log_range((int)1e3, (int)1e8, 10, 64))
     {
       std::vector<double> times;
@@ -133,6 +133,7 @@ void bench(sc::numeric_type dtype, std::string operation)
 
   if(operation=="dot")
   {
+    print_header({"N"});
     for(int_t N: create_log_range((int)1e3, (int)1e8, 10, 64))
     {
       std::vector<double> times;
@@ -161,28 +162,24 @@ void bench(sc::numeric_type dtype, std::string operation)
   if(operation.substr(0, 4)=="gemv")
   {
     std::vector<std::tuple<std::string, char,int_t, int_t> > MNs;
-    //Linear System
-    MNs.push_back(make_tuple("square153[N]", 'N',153,153));
-    MNs.push_back(make_tuple("square153[T]", 'T',153,153));
-    MNs.push_back(make_tuple("square1024[T]", 'T',1024,1024));
-    MNs.push_back(make_tuple("square2867[N]", 'N',2867,2867));
-    MNs.push_back(make_tuple("square2867[T]", 'T',2867,2867));
-    //Normalization
-    MNs.push_back(make_tuple("norm64[N]", 'N', 64, 60000));
-    MNs.push_back(make_tuple("norm64[T]", 'T', 64, 60000));
-    MNs.push_back(make_tuple("norm256[N]", 'N', 256, 60000));
-    MNs.push_back(make_tuple("norm256[T]", 'T', 256, 60000));
-    MNs.push_back(make_tuple("norm1024[N]", 'N', 1024, 60000));
-    MNs.push_back(make_tuple("norm1024[T]", 'T', 1024, 60000));
-    //Householder
-    MNs.push_back(make_tuple("tallskinny-1[N]", 'N', 10, 60000));
-    MNs.push_back(make_tuple("tallskinny-1[T]", 'T', 10, 60000));
-    MNs.push_back(make_tuple("tallskinny-2[N]", 'N', 30, 60000));
-    MNs.push_back(make_tuple("tallskinny-2[T]", 'T', 30, 60000));
-
+//    //Linear System
+    MNs.push_back(make_tuple("Square", 'N',153,153));
+    MNs.push_back(make_tuple("Square", 'T',153,153));
+    MNs.push_back(make_tuple("square", 'T',1024,1024));
+    MNs.push_back(make_tuple("square", 'N',2867,2867));
+    MNs.push_back(make_tuple("Square", 'T',2867,2867));
+    for(char AT: std::vector<char>{'N', 'T'})
+      for(sc::int_t N: std::vector<sc::int_t>{60000, 120000})
+        for(sc::int_t M: std::vector<sc::int_t>{16, 32, 64, 256, 1024})
+             MNs.push_back(make_tuple("Wide", AT, M, N));
+    for(char AT: std::vector<char>{'N', 'T'})
+      for(sc::int_t N: std::vector<sc::int_t>{60000, 120000})
+        for(sc::int_t M: std::vector<sc::int_t>{16, 32, 64, 256, 1024})
+             MNs.push_back(make_tuple("Tall", AT, N, M));
     /*---------*/
     /*--BLAS2--*/
     /*---------*/
+    print_header({"BENCH", "M", "N", "AT"});
     for(std::tuple<std::string, char, int_t, int_t> MN: MNs)
     {
       std::vector<double> times;
@@ -211,7 +208,7 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
       times.push_back(bench([&](){cublasSgemv(AT?'t':'n', As1, As2, 1, (T*)cu(A), lda, (T*)cu(x), 1, 0, (T*)cu(y), 1);}, cusync));
 #endif
-      print_performance(N, {}, times, [&](double t){ return (M*N + M + N)*dtsize/t;});
+      print_performance(std::get<0>(MN), {M, N, AT}, times, [&](double t){ return (M*N + M + N)*dtsize/t;});
     }
   }
 
