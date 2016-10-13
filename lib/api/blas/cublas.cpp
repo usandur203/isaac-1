@@ -27,39 +27,67 @@ namespace sc = isaac;
 using sc::driver::Buffer;
 using sc::assign;
 
+
 //Opaque context structure
 class cublasContext
 {
 public:
-  cublasContext(sc::driver::CommandQueue const & queue);
-  cublasContext(sc::driver::Context const & ctx);
-  sc::driver::CommandQueue const & queue() const;
-  sc::driver::Context const & context() const;
-  void update(CUstream stream);
+  cublasContext(sc::driver::CommandQueue const & queue): init_queue_(queue), active_queue_(init_queue_), pointer_mode_(CUBLAS_POINTER_MODE_HOST)
+  {}
+  cublasContext(sc::driver::Context const & ctx): init_queue_(ctx), active_queue_(init_queue_), pointer_mode_(CUBLAS_POINTER_MODE_HOST)
+  {}
+
+  // Queue
+  sc::driver::CommandQueue const & queue() const
+  { return active_queue_; }
+  void queue(CUstream stream)
+  { active_queue_ = sc::driver::CommandQueue(active_queue_.context(), stream, false); }
+
+  // PointerMode
+  void pointer_mode(cublasPointerMode_t mode)
+  { pointer_mode_ = mode; }
+  cublasPointerMode_t pointer_mode() const
+  { return pointer_mode_; }
+
+  //Execution helper
+  cublasStatus_t execute(sc::expression_tree const & operation)
+  {
+    sc::runtime::execution_options_type options(active_queue_);
+    sc::runtime::execute(sc::runtime::execution_handler(operation, options));
+    return CUBLAS_STATUS_SUCCESS;
+  }
+
+  // Multiply by scalar
+  template<class T, class U>
+  sc::expression_tree mult(T* alpha, U const & x){
+    if(pointer_mode_==CUBLAS_POINTER_MODE_DEVICE)
+      return sc::scalar(sc::to_numeric_type<T>::value, Buffer((CUdeviceptr)alpha,false), 0)*x;
+    else
+      return *alpha*x;
+  }
+  // Assigns to scalar
+  template<class T, class U>
+  cublasStatus_t assign_scalar(T* alpha, U const & x){
+    sc::numeric_type dtype = sc::to_numeric_type<T>::value;
+    if(pointer_mode_==CUBLAS_POINTER_MODE_DEVICE){
+      sc::scalar scr(dtype, Buffer((CUdeviceptr)alpha,false), 0);
+      return execute(sc::assign(scr, x));
+    }
+    else{
+      sc::scalar scr(dtype);
+      cublasStatus_t status = execute(sc::assign(scr, x));
+      *alpha = scr;
+      return status;
+    }
+  }
+
 private:
   sc::driver::CommandQueue init_queue_; //Keeps ownership of allocated handle even when inactive
   sc::driver::CommandQueue active_queue_;
+  cublasPointerMode_t pointer_mode_;
 };
 
-cublasContext::cublasContext(sc::driver::CommandQueue const & queue): init_queue_(queue), active_queue_(init_queue_){ }
-
-cublasContext::cublasContext(sc::driver::Context const & ctx): init_queue_(ctx), active_queue_(init_queue_){ }
-
-sc::driver::CommandQueue const & cublasContext::queue() const
-{ return active_queue_; }
-
-sc::driver::Context const & cublasContext::context() const
-{ return active_queue_.context(); }
-
-void cublasContext::update(CUstream stream)
-{ active_queue_ = sc::driver::CommandQueue(context(), stream, false); }
-
-
-
-//Actual functions implementation
-extern "C"
-{
-
+// Helpers
 inline cublasOperation_t cvt_trans(char c)
 {
   if(c=='n' || c=='N') return CUBLAS_OP_N;
@@ -68,9 +96,17 @@ inline cublasOperation_t cvt_trans(char c)
 }
 
 inline cublasHandle_t alloc_default_handle()
-{ return new cublasContext(sc::driver::backend::queues::get_default()); }
+{
+  sc::driver::backend::init();
+  return new cublasContext(sc::driver::backend::queues::get_default());
+}
 
-static cublasHandle_t dft_handle = NULL;
+static cublasHandle_t dft_handle = alloc_default_handle();
+
+//Actual functions implementation
+extern "C"
+{
+
 
 cublasStatus cublasInit()
 {
@@ -109,12 +145,27 @@ cublasStatus_t cublasDestroy_v2 (cublasHandle_t handle)
 }
 
 //*****************
+//Pointer Mode
+//*****************
+cublasStatus_t cublasSetPointerMode_v2(cublasHandle_t handle, cublasPointerMode_t mode)
+{
+  handle->pointer_mode(mode);
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+cublasStatus_t cublasGetPointerMode_v2(cublasHandle_t handle, cublasPointerMode_t *mode)
+{
+  *mode = handle->pointer_mode();
+  return CUBLAS_STATUS_SUCCESS;
+}
+
+//*****************
 //Stream
 //*****************
 
 cublasStatus_t cublasSetStream_v2(cublasHandle_t handle, cudaStream_t streamId)
 {
-  handle->update((CUstream)streamId);
+  handle->queue((CUstream)streamId);
   return CUBLAS_STATUS_SUCCESS;
 }
 
@@ -124,14 +175,6 @@ cublasStatus_t cublasGetStream_v2(cublasHandle_t handle, cudaStream_t *streamId)
   return CUBLAS_STATUS_SUCCESS;
 }
 
-static cublasStatus_t execute(cublasHandle_t handle, sc::expression_tree const & operation)
-{
-  if(handle==NULL)
-    handle = alloc_default_handle();
-  sc::runtime::execution_options_type options(handle->queue());
-  sc::runtime::execute(sc::runtime::execution_handler(operation, options));
-  return CUBLAS_STATUS_SUCCESS;
-}
 
 //*****************
 //BLAS1
@@ -139,12 +182,12 @@ static cublasStatus_t execute(cublasHandle_t handle, sc::expression_tree const &
 
 //AXPY
 #define MAKE_AXPY(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-  cublasStatus_t cublas ## TYPE_CHAR ## axpy_v2 (cublasHandle_t handle, int n, const TYPE_CU *alpha,\
+  cublasStatus_t cublas ## TYPE_CHAR ## axpy_v2 (cublasHandle_t h, int n, const TYPE_CU *alpha,\
   const TYPE_CU *x, int incx, TYPE_CU *y, int incy)\
 {\
   sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
   sc::array dy(n, TYPE_ISAAC, Buffer((CUdeviceptr)y,false), 0, incy); \
-  return execute(handle, assign(dy, *alpha*dx + dy));\
+  return h->execute(assign(dy, h->mult(alpha,dx) + dy));\
 }\
   \
   void cublas ## TYPE_CHAR ## axpy (int n, TYPE_CU alpha, const TYPE_CU *x, int incx, TYPE_CU *y, int incy)\
@@ -155,11 +198,11 @@ MAKE_AXPY(D, sc::DOUBLE_TYPE, double)
 
 //COPY
 #define MAKE_COPY(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-  cublasStatus_t cublas ## TYPE_CHAR ## copy_v2 (cublasHandle_t handle, int n, const TYPE_CU *x, int incx, TYPE_CU *y, int incy)\
+  cublasStatus_t cublas ## TYPE_CHAR ## copy_v2 (cublasHandle_t h, int n, const TYPE_CU *x, int incx, TYPE_CU *y, int incy)\
 {\
   sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
   sc::array dy(n, TYPE_ISAAC, Buffer((CUdeviceptr)y,false), 0, incy); \
-  return execute(handle, assign(dy,dx));\
+  return h->execute(assign(dy,dx));\
 }\
 \
 void cublas ## TYPE_CHAR ## copy (int n, const TYPE_CU *x, int incx, TYPE_CU *y, int incy)\
@@ -170,10 +213,10 @@ MAKE_COPY(D, sc::DOUBLE_TYPE, double)
 
 //SCAL
 #define MAKE_SCAL(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-  cublasStatus_t cublas ## TYPE_CHAR ## scal_v2 (cublasHandle_t handle, int n, const TYPE_CU * alpha, TYPE_CU *x, int incx)\
+  cublasStatus_t cublas ## TYPE_CHAR ## scal_v2 (cublasHandle_t h, int n, const TYPE_CU * alpha, TYPE_CU *x, int incx)\
 {\
   sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
-  return execute(handle, assign(dx,*alpha*dx));\
+  return h->execute(assign(dx,h->mult(alpha,dx)));\
 }\
 \
 void cublas ## TYPE_CHAR ## scal (int n, TYPE_CU alpha, TYPE_CU *x, int incx)\
@@ -184,14 +227,11 @@ MAKE_SCAL(D, sc::DOUBLE_TYPE, double)
 
 //DOT
 #define MAKE_DOT(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-  cublasStatus_t cublas ## TYPE_CHAR ## dot_v2 (cublasHandle_t handle, int n, const TYPE_CU *x, int incx, const TYPE_CU *y, int incy, TYPE_CU* result)\
+  cublasStatus_t cublas ## TYPE_CHAR ## dot_v2 (cublasHandle_t h, int n, const TYPE_CU *x, int incx, const TYPE_CU *y, int incy, TYPE_CU* result)\
 {\
   sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
   sc::array dy(n, TYPE_ISAAC, Buffer((CUdeviceptr)y,false), 0, incy); \
-  sc::scalar scr(TYPE_ISAAC);\
-  cublasStatus_t status = execute(handle, assign(scr, sc::dot(dx,dy)));\
-  *result = scr;\
-  return status;\
+  return h->assign_scalar(result, sc::dot(dx,dy));\
 }\
 \
 TYPE_CU cublas ## TYPE_CHAR ## dot (int n, const TYPE_CU *x, int incx, const TYPE_CU *y, int incy)\
@@ -206,13 +246,11 @@ MAKE_DOT(D, sc::DOUBLE_TYPE, double)
 
 //ASUM
 #define MAKE_ASUM(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-cublasStatus_t cublas ## TYPE_CHAR ## asum_v2 (cublasHandle_t handle, int n, const TYPE_CU *x, int incx, TYPE_CU* result)\
+cublasStatus_t cublas ## TYPE_CHAR ## asum_v2 (cublasHandle_t h, int n, const TYPE_CU *x, int incx, TYPE_CU* result)\
 {\
   sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
   sc::scalar scr(TYPE_ISAAC);\
-  cublasStatus_t status = execute(handle, assign(scr, sum(abs(dx))));\
-  *result = scr;\
-  return status;\
+  return h->assign_scalar(result, sum(abs(dx)));\
 }\
 \
 TYPE_CU cublas ## TYPE_CHAR ## asum (int n, const TYPE_CU *x, int incx)\
@@ -230,7 +268,7 @@ MAKE_ASUM(D, sc::DOUBLE_TYPE, double)
 //*****************
 
 #define MAKE_GEMV(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-  cublasStatus_t cublas ## TYPE_CHAR ## gemv_v2 (cublasHandle_t handle, cublasOperation_t trans, int m,  int n, const TYPE_CU *alpha,\
+  cublasStatus_t cublas ## TYPE_CHAR ## gemv_v2 (cublasHandle_t h, cublasOperation_t trans, int m,  int n, const TYPE_CU *alpha,\
   const TYPE_CU *A, int lda, const TYPE_CU *x, int incx, const TYPE_CU *beta, TYPE_CU *y, int incy)\
 {\
   if(trans==CUBLAS_OP_C)\
@@ -245,9 +283,9 @@ MAKE_ASUM(D, sc::DOUBLE_TYPE, double)
   sc::array dy(sy, TYPE_ISAAC, Buffer((CUdeviceptr)y, false), 0, incy);\
   \
   if(AT)\
-    return execute(handle, assign(dy, *alpha*dot(dA.T, dx) + *beta*dy));\
+    return h->execute(assign(dy, h->mult(alpha,dot(dA.T, dx)) + h->mult(beta,dy)));\
   else\
-    return execute(handle, assign(dy, *alpha*dot(dA, dx) + *beta*dy));\
+    return h->execute(assign(dy, h->mult(alpha,dot(dA, dx)) + h->mult(beta,dy)));\
 }\
 \
 void cublas ## TYPE_CHAR ## gemv (char trans, int m, int n, TYPE_CU alpha,\
@@ -260,13 +298,13 @@ MAKE_GEMV(D, sc::DOUBLE_TYPE, double)
 
 
 #define MAKE_GER(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-  cublasStatus_t cublas ## TYPE_CHAR ## ger_v2 (cublasHandle_t handle, int m, int n, const TYPE_CU * alpha, const TYPE_CU *x, int incx,\
+  cublasStatus_t cublas ## TYPE_CHAR ## ger_v2 (cublasHandle_t h, int m, int n, const TYPE_CU * alpha, const TYPE_CU *x, int incx,\
   const TYPE_CU *y, int incy, TYPE_CU *A, int lda)\
 {\
   sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
   sc::array dy(n, TYPE_ISAAC, Buffer((CUdeviceptr)y,false), 0, incy); \
   sc::array dA(m, n, TYPE_ISAAC, Buffer((CUdeviceptr)A, false), 0, lda);\
-  return execute(handle, assign(dA, *alpha*outer(dx, dy) + dA));\
+  return h->execute(assign(dA, h->mult(alpha,outer(dx, dy)) + dA));\
 }\
 \
   void cublas ## TYPE_CHAR ## ger (int m, int n, TYPE_CU alpha, const TYPE_CU *x, int incx,\
@@ -282,7 +320,7 @@ MAKE_GER(D, sc::DOUBLE_TYPE, double)
 //*****************
 
 #define MAKE_GEMM(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
-cublasStatus_t cublas ## TYPE_CHAR ## gemm_v2(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,\
+cublasStatus_t cublas ## TYPE_CHAR ## gemm_v2(cublasHandle_t h, cublasOperation_t transa, cublasOperation_t transb,\
   int m, int n, int k, const TYPE_CU *alpha, const TYPE_CU *A,\
   int lda, const TYPE_CU *B, int ldb,const TYPE_CU *beta, TYPE_CU *C, int ldc)\
 {\
@@ -290,13 +328,11 @@ cublasStatus_t cublas ## TYPE_CHAR ## gemm_v2(cublasHandle_t handle, cublasOpera
     return CUBLAS_STATUS_NOT_SUPPORTED;\
   bool AT = transa==CUBLAS_OP_T;\
   bool BT = transb==CUBLAS_OP_T;\
-  TYPE_CU a = *alpha;\
-  TYPE_CU b = *beta;\
   if(k==1 && m>1 && n>1){\
     sc::array dA(m, TYPE_ISAAC, Buffer((CUdeviceptr)A, false), 0, AT?lda:1);\
     sc::array dB(n, TYPE_ISAAC, Buffer((CUdeviceptr)B, false), 0, BT?1:ldb);\
     sc::array dC(m, n, TYPE_ISAAC, Buffer((CUdeviceptr)C, false), 0, ldc);\
-    return execute(handle, assign(dC, a*sc::outer(dA, dB) + b*dC));\
+    return h->execute(assign(dC, h->mult(alpha,sc::outer(dA, dB)) + h->mult(beta,dC)));\
   }\
   sc::int_t As1 = m, As2 = k;\
   sc::int_t Bs1 = k, Bs2 = n;\
@@ -310,13 +346,13 @@ cublasStatus_t cublas ## TYPE_CHAR ## gemm_v2(cublasHandle_t handle, cublasOpera
   sc::array dC(m, n, TYPE_ISAAC, Buffer((CUdeviceptr)C, false), 0, ldc);\
   /*Operation*/\
   if(AT && BT)\
-    return execute(handle, assign(dC, a*dot(dA.T, dB.T) + b*dC));\
+    return h->execute(assign(dC, h->mult(alpha,dot(dA.T, dB.T)) + h->mult(beta,dC)));\
   else if(AT && !BT)\
-    return execute(handle, assign(dC, a*dot(dA.T, dB) + b*dC));\
+    return h->execute(assign(dC, h->mult(alpha,dot(dA.T, dB)) + h->mult(beta,dC)));\
   else if(!AT && BT)\
-    return execute(handle, assign(dC, a*dot(dA, dB.T) + b*dC));\
+    return h->execute(assign(dC, h->mult(alpha,dot(dA, dB.T)) + h->mult(beta,dC)));\
   else\
-    return execute(handle, assign(dC, a*dot(dA, dB) + b*dC));\
+    return h->execute(assign(dC, h->mult(alpha,dot(dA, dB)) + h->mult(beta,dC)));\
 }\
 \
 void cublas ## TYPE_CHAR ## gemm (char transa, char transb, int m, int n, int k,\
