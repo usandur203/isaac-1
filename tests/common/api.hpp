@@ -182,7 +182,7 @@ template<typename T>
 void init_rand(simple_vector_base<T> & x)
 {
   for (int_t i = 0; i < x.size(); ++i)
-    x[i] = (T)rand()/RAND_MAX;
+    x[i] = (T)rand()/RAND_MAX - .5;
 }
 
 template<typename T>
@@ -190,7 +190,7 @@ void init_rand(simple_matrix_base<T> & A)
 {
   for (int_t i = 0; i < A.size1(); ++i)
     for(int_t j = 0 ; j < A.size2() ; ++j)
-      A(i,j) = (T)rand()/RAND_MAX;
+      A(i,j) = (T)rand()/RAND_MAX - .5;
 }
 
 template<typename T>
@@ -204,8 +204,8 @@ simple_matrix<T> simple_trans(simple_matrix_base<T> const & A)
 }
 
 /*------ Compare -----------*/
-template<typename T>
-bool diff(T a, T b, T epsilon, typename std::enable_if<std::is_arithmetic<T>::value>::type* = 0)
+template<typename U, typename T>
+bool diff(U a, U b, T epsilon, typename std::enable_if<std::is_arithmetic<U>::value>::type* = 0)
 {
   T delta = std::abs(a - b);
   if(std::max(a, b)!=0)
@@ -228,37 +228,42 @@ bool diff(VecType1 const & x, VecType2 const & y, typename VecType1::value_type 
   return false;
 }
 
-template<class VecType>
-bool diff(VecType const & x, isaac::array const & iy, typename VecType::value_type epsilon)
+template<class T>
+bool diff(simple_vector_base<T> const & x, isaac::array_base const & iy, T epsilon)
 {
-  VecType y(x.size());
-  isaac::copy(iy, y);
+  simple_vector<T> y(x.size());
+  isaac::copy(iy, y.data());
   return diff(x, y, epsilon);
 }
 
 template<class VecType>
-bool diff(isaac::array const & x, VecType const & y, typename VecType::value_type epsilon)
+bool diff(isaac::array_base const & x, VecType const & y, typename VecType::value_type epsilon)
 { return diff(y, x, epsilon); }
 
-#define INIT_VECTOR(N, SUBN, START, STRIDE, CPREFIX, PREFIX, CTX) \
-    simple_vector<T> CPREFIX(N);\
-    simple_vector_s<T> CPREFIX ## _s(CPREFIX, START, START + STRIDE*SUBN, STRIDE);\
-    init_rand(CPREFIX);\
-    isaac::array PREFIX(CPREFIX.data(), CTX);\
-    isaac::view PREFIX ## _s = PREFIX[{START, START + STRIDE*SUBN, STRIDE}];
+template<class T, class F>
+bool diff(T const & x, isaac::scalar const & y, F epsilon)
+{ return diff(x, (T)y, epsilon); }
 
-#define INIT_MATRIX(M, SUBM, START1, STRIDE1, N, SUBN, START2, STRIDE2, CPREFIX, PREFIX, CTX) \
-    simple_matrix<T> CPREFIX(M, N);\
-    simple_matrix_s<T> CPREFIX ## _s(CPREFIX, START1, START1 + STRIDE1*SUBM, STRIDE1,\
-                                                                 START2, START2 + STRIDE2*SUBN, STRIDE2);\
-    init_rand(CPREFIX);\
-    isaac::array PREFIX(M, N, CPREFIX.data(), CTX);\
-    isaac::view PREFIX ## _s(PREFIX({START1, START1 + STRIDE1*SUBM, STRIDE1},\
-                                                   {START2, START2 + STRIDE2*SUBN, STRIDE2}));\
-    simple_matrix<T> CPREFIX ## T = simple_trans(CPREFIX);\
-    isaac::array PREFIX ## T(N, M, CPREFIX ## T.data(), CTX);\
-    isaac::view PREFIX ## T_s(PREFIX ## T( {START2, START2 + STRIDE2*SUBN, STRIDE2},\
-                                                    {START1, START1 + STRIDE1*SUBM, STRIDE1}));\
+template<class T, class F>
+bool diff(isaac::scalar const & x, T y, F epsilon)
+{ return diff((T)x, y, epsilon); }
+
+template<class T, class R, class CR>
+void test(std::string const & name, std::function<void(void)> cpufn, std::function<void(void)> gpufn,
+                R const & r, CR const & cr, int& nfail, int& npass)
+{
+  std::cout << name << "..." << std::flush;
+  cpufn();
+  gpufn();
+  if(diff(r, cr, numeric_trait<T>::epsilon)){\
+    nfail++;\
+    std::cout << " [FAIL] " << std::endl;\
+  }\
+  else{\
+    npass++;\
+    std::cout << std::endl;\
+  }\
+}
 
 template<typename test_fun_t>
 int run_test(test_fun_t const & testf, test_fun_t const & /*testd*/)
@@ -283,6 +288,26 @@ int run_test(test_fun_t const & testf, test_fun_t const & /*testd*/)
       return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
+
+#define INIT_VECTOR(N, SUBN, START, STRIDE, CPREFIX, PREFIX, CTX) \
+    simple_vector<T> CPREFIX(N);\
+    simple_vector_s<T> CPREFIX ## _s(CPREFIX, START, START + STRIDE*SUBN, STRIDE);\
+    init_rand(CPREFIX);\
+    isaac::array PREFIX(CPREFIX.data(), CTX);\
+    isaac::view PREFIX ## _s = PREFIX[{START, START + STRIDE*SUBN, STRIDE}];
+
+#define INIT_MATRIX(M, SUBM, START1, STRIDE1, N, SUBN, START2, STRIDE2, CPREFIX, PREFIX, CTX) \
+    simple_matrix<T> CPREFIX(M, N);\
+    simple_matrix_s<T> CPREFIX ## _s(CPREFIX, START1, START1 + STRIDE1*SUBM, STRIDE1,\
+                                                                 START2, START2 + STRIDE2*SUBN, STRIDE2);\
+    init_rand(CPREFIX);\
+    isaac::array PREFIX(M, N, CPREFIX.data(), CTX);\
+    isaac::view PREFIX ## _s(PREFIX({START1, START1 + STRIDE1*SUBM, STRIDE1},\
+                                                   {START2, START2 + STRIDE2*SUBN, STRIDE2}));\
+    simple_matrix<T> CPREFIX ## T = simple_trans(CPREFIX);\
+    isaac::array PREFIX ## T(N, M, CPREFIX ## T.data(), CTX);\
+    isaac::view PREFIX ## T_s(PREFIX ## T( {START2, START2 + STRIDE2*SUBN, STRIDE2},\
+                                                    {START1, START1 + STRIDE1*SUBM, STRIDE1}));\
 
 #define ADD_TEST_1D_EW(NAME, CPU_LOOP, GPU_EXPR) \
   {\

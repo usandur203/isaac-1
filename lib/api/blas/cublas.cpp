@@ -263,6 +263,43 @@ TYPE_CU cublas ## TYPE_CHAR ## asum (int n, const TYPE_CU *x, int incx)\
 MAKE_ASUM(S, sc::FLOAT_TYPE, float)
 MAKE_ASUM(D, sc::DOUBLE_TYPE, double)
 
+#define MAKE_IAMAX(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
+cublasStatus_t cublasI ## TYPE_CHAR ## amax_v2 (cublasHandle_t h, int n, const TYPE_CU *x, int incx, int* result)\
+{\
+  sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
+  sc::scalar scr(TYPE_ISAAC);\
+  return h->assign_scalar(result, sc::argmax(abs(dx)));\
+}\
+\
+int cublasI ## TYPE_CHAR ## amax(int n, const TYPE_CU *x, int incx)\
+{\
+  int result;\
+  cublasI ## TYPE_CHAR ## amax_v2(dft_handle, n, x, incx, &result);\
+  return result;\
+}\
+
+MAKE_IAMAX(s, sc::FLOAT_TYPE, float)
+MAKE_IAMAX(d, sc::DOUBLE_TYPE, double)
+
+#define MAKE_IAMIN(TYPE_CHAR, TYPE_ISAAC, TYPE_CU) \
+cublasStatus_t cublasI ## TYPE_CHAR ## amin_v2 (cublasHandle_t h, int n, const TYPE_CU *x, int incx, int* result)\
+{\
+  sc::array dx(n, TYPE_ISAAC, Buffer((CUdeviceptr)x,false), 0, incx); \
+  sc::scalar scr(TYPE_ISAAC);\
+  return h->assign_scalar(result, sc::argmin(abs(dx)));\
+}\
+\
+int cublasI ## TYPE_CHAR ## amin(int n, const TYPE_CU *x, int incx)\
+{\
+  int result;\
+  cublasI ## TYPE_CHAR ## amin_v2(dft_handle, n, x, incx, &result);\
+  return result;\
+}\
+
+MAKE_IAMIN(s, sc::FLOAT_TYPE, float)
+MAKE_IAMIN(d, sc::DOUBLE_TYPE, double)
+
+
 //*****************
 //BLAS2
 //*****************

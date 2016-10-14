@@ -151,6 +151,35 @@ extern "C"
     MAKE_ASUM(S, sc::FLOAT_TYPE, cl_float)
     MAKE_ASUM(D, sc::DOUBLE_TYPE, cl_double)
 
+    //IAMAX
+    #define MAKE_IAMAX(TYPE_CHAR, TYPE_ISAAC, TYPE_CL) \
+    clblasStatus clblasi ## TYPE_CHAR ## amax(size_t N, cl_mem res, size_t offres, \
+                             const cl_mem mx, size_t offx, int incx,\
+                             cl_mem /*scratchBuff*/, cl_uint numCommandQueues, cl_command_queue *commandQueues,\
+                             cl_uint numEventsInWaitList, const cl_event *eventWaitList, cl_event *events)\
+    {\
+        sc::array x((sc::int_t)N, TYPE_ISAAC, sc::driver::Buffer(mx, false), (sc::int_t)offx, incx);\
+        sc::scalar s(TYPE_ISAAC, sc::driver::Buffer(res, false), (sc::int_t)offres);\
+        execute(sc::assign(s, argmax(abs(x))), s.context(), numCommandQueues, commandQueues, numEventsInWaitList, eventWaitList, events);\
+        return clblasSuccess;\
+    }
+    MAKE_IAMAX(S, sc::FLOAT_TYPE, cl_float)
+    MAKE_IAMAX(D, sc::DOUBLE_TYPE, cl_double)
+
+    //IAMIN
+    #define MAKE_IAMIN(TYPE_CHAR, TYPE_ISAAC, TYPE_CL) \
+    clblasStatus clblasi ## TYPE_CHAR ## amin(size_t N, cl_mem res, size_t offres, \
+                             const cl_mem mx, size_t offx, int incx,\
+                             cl_mem /*scratchBuff*/, cl_uint numCommandQueues, cl_command_queue *commandQueues,\
+                             cl_uint numEventsInWaitList, const cl_event *eventWaitList, cl_event *events)\
+    {\
+        sc::array x((sc::int_t)N, TYPE_ISAAC, sc::driver::Buffer(mx, false), (sc::int_t)offx, incx);\
+        sc::scalar s(TYPE_ISAAC, sc::driver::Buffer(res, false), (sc::int_t)offres);\
+        execute(sc::assign(s, argmin(abs(x))), s.context(), numCommandQueues, commandQueues, numEventsInWaitList, eventWaitList, events);\
+        return clblasSuccess;\
+    }
+    MAKE_IAMIN(S, sc::FLOAT_TYPE, cl_float)
+    MAKE_IAMIN(D, sc::DOUBLE_TYPE, cl_double)
 
     //*****************
     //BLAS2

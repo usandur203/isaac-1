@@ -44,14 +44,13 @@ inline void compute_reduce_1d(kernel_generation_stream & os, std::string acc, st
 
 inline void compute_index_reduce_1d(kernel_generation_stream & os, std::string acc, std::string cur, std::string const & acc_value, std::string const & cur_value, op_element const & op)
 {
-  //        os << acc << " = " << cur_value << ">" << acc_value  << "?" << cur << ":" << acc << ";" << std::endl;
-  os << acc << "= select(" << acc << "," << cur << "," << cur_value << ">" << acc_value << ");" << std::endl;
   os << acc_value << "=";
   if (op.type==ELEMENT_ARGFMAX_TYPE) os << "fmax";
   if (op.type==ELEMENT_ARGMAX_TYPE) os << "max";
   if (op.type==ELEMENT_ARGFMIN_TYPE) os << "fmin";
   if (op.type==ELEMENT_ARGMIN_TYPE) os << "min";
   os << "(" << acc_value << "," << cur_value << ");"<< std::endl;
+  os << acc << " = " << acc_value << "==" << cur_value  << "?" << cur << ":" << acc << ";" << std::endl;
 }
 
 inline std::string neutral_element(op_element const & op, driver::backend_type backend, std::string const & dtype)
