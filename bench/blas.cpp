@@ -22,6 +22,42 @@ typedef sc::int_t int_t;
 
 Timer tmr;
 
+/* C++ wrapper for BLAS */
+#ifdef BENCH_CLBLAS
+template<typename... Args> void clblasAxpy(float, Args... args){ clblasSaxpy(args...); }
+template<typename... Args> void clblasAxpy(double, Args... args){ clblasDaxpy(args...); }
+template<typename... Args> void clblasDot(float, Args... args){ clblasSdot(args...); }
+template<typename... Args> void clblasDot(double, Args... args){ clblasDdot(args...); }
+template<typename... Args> void clblasGemv(float, Args... args){ clblasSgemv(args...); }
+template<typename... Args> void clblasGemv(double, Args... args){ clblasDgemv(args...); }
+template<typename... Args> void clblasGemm(float, Args... args){ clblasSgemm(args...); }
+template<typename... Args> void clblasGemm(double, Args... args){ clblasDgemm(args...); }
+#endif
+
+#ifdef BENCH_CBLAS
+template<typename... Args> void cblasAxpy(float, Args... args){ cblas_saxpy(args...); }
+template<typename... Args> void cblasAxpy(double, Args... args){ cblas_daxpy(args...); }
+template<typename... Args> void cblasDot(float, Args... args){ cblas_sdot(args...); }
+template<typename... Args> void cblasDot(double, Args... args){ cblas_ddot(args...); }
+template<typename... Args> void cblasGemv(float, Args... args){ cblas_sgemv(args...); }
+template<typename... Args> void cblasGemv(double, Args... args){ cblas_dgemv(args...); }
+template<typename... Args> void cblasGemm(float, Args... args){ cblas_sgemm(args...); }
+template<typename... Args> void cblasGemm(double, Args... args){ cblas_dgemm(args...); }
+#endif
+
+//cuBLAS
+#ifdef BENCH_CUBLAS
+template<typename... Args> void cublasAxpy(float, Args... args){ cublasSaxpy(args...); }
+template<typename... Args> void cublasAxpy(double, Args... args){ cublasDaxpy(args...); }
+template<typename... Args> void cublasDot(float, Args... args){ cublasSdot(args...); }
+template<typename... Args> void cublasDot(double, Args... args){ cublasDdot(args...); }
+template<typename... Args> void cublasGemv(float, Args... args){ cublasSgemv(args...); }
+template<typename... Args> void cublasGemv(double, Args... args){ cublasDgemv(args...); }
+template<typename... Args> void cublasGemm(float, Args... args){ cublasSgemm(args...); }
+template<typename... Args> void cublasGemm(double, Args... args){ cublasDgemm(args...); }
+#endif
+
+//
 template<class OP, class SYNC>
 double bench(OP const & op, SYNC const & sync)
 {
@@ -66,16 +102,16 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){y = x + alpha*y;}, sync));
 #ifdef BENCH_CLBLAS
       if(x.context().backend()==sc::driver::OPENCL)
-        times.push_back(bench([&]() {clblasSaxpy(N, alpha, cl(x), 0, 1, cl(y), 0, 1, 1, &cl(queue), 0, NULL, NULL);}, sync));
+        times.push_back(bench([&]() {clblasAxpy(T(), N, alpha, cl(x), 0, 1, cl(y), 0, 1, 1, &cl(queue), 0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
       std::vector<float> cx(N), cy(N);
       sc::copy(x, cx);
       sc::copy(y, cy);
-      times.push_back(bench([&](){cblas_saxpy(N, alpha, cx.data(), 1, cy.data(), 1);}, sync));
+      times.push_back(bench([&](){cblasAxpy(T(), N, alpha, cx.data(), 1, cy.data(), 1);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasSaxpy(N, alpha, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
+      times.push_back(bench([&](){cublasAxpy(T(), N, alpha, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
 #endif
     }
   }
@@ -92,16 +128,16 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){s = dot(x,y);}, sync));
 #ifdef BENCH_CLBLAS
       if(x.context().backend()==sc::driver::OPENCL)
-        times.push_back(bench([&]() {clblasSdot(N, cl(s), 0, cl(x), 0, 1, cl(y), 0, 1, cl(scratch), 1, &cl(queue), 0, NULL, NULL);}, sync));
+        times.push_back(bench([&]() {clblasDot(T(), N, cl(s), 0, cl(x), 0, 1, cl(y), 0, 1, cl(scratch), 1, &cl(queue), 0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
       std::vector<float> cx(N), cy(N);
       sc::copy(x, cx);
       sc::copy(y, cy);
-      times.push_back(bench([&](){cblas_sdot(N, cx.data(), 1, cy.data(), 1);}, sync));
+      times.push_back(bench([&](){cblasDot(T(), N, cx.data(), 1, cy.data(), 1);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasSdot(N, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
+      times.push_back(bench([&](){cublasDot(T(), N, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
 #endif
     }
   }
@@ -147,17 +183,17 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){y = AT?dot(A.T,x):dot(A,x);}, sync));
 #ifdef BENCH_CLBLAS
       if(x.context().backend()==sc::driver::OPENCL)
-        times.push_back(bench([&]() {clblasSgemv(clblasColumnMajor, AT?clblasTrans:clblasNoTrans, As1, As2, 1, cl(A), 0, lda, cl(x), 0, 1, 0, cl(y), 0, 1, 1, &cl(queue),0, NULL, NULL);}, sync));
+        times.push_back(bench([&]() {clblasGemv(T(), clblasColumnMajor, AT?clblasTrans:clblasNoTrans, As1, As2, 1, cl(A), 0, lda, cl(x), 0, 1, 0, cl(y), 0, 1, 1, &cl(queue),0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
       std::vector<float> cA(M*N), cx(N), cy(M);
       sc::copy(x, cx);
       sc::copy(y, cy);
       sc::copy(A, cA);
-      times.push_back(bench([&](){cblas_sgemv(CblasColMajor, AT?CblasTrans:CblasNoTrans, As1, As2, 1, cA.data(), lda, cx.data(), 1, 0, cy.data(), 1);}, sync));
+      times.push_back(bench([&](){cblasGemv(T(), CblasColMajor, AT?CblasTrans:CblasNoTrans, As1, As2, 1, cA.data(), lda, cx.data(), 1, 0, cy.data(), 1);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasSgemv(AT?'t':'n', As1, As2, 1, (T*)cu(A), lda, (T*)cu(x), 1, 0, (T*)cu(y), 1);}, cusync));
+      times.push_back(bench([&](){cublasGemv(T(), AT?'t':'n', As1, As2, 1, (T*)cu(A), lda, (T*)cu(x), 1, 0, (T*)cu(y), 1);}, cusync));
 #endif
     }
   }
@@ -225,19 +261,19 @@ void bench(sc::numeric_type dtype, std::string operation)
                                             :dot(A,B));}, sync));
 #ifdef BENCH_CLBLAS
       if(C.context().backend()==sc::driver::OPENCL)
-        times.push_back(bench([&]() {clblasSgemm(clblasColumnMajor, AT?clblasTrans:clblasNoTrans, BT?clblasTrans:clblasNoTrans,
+        times.push_back(bench([&]() {clblasGemm(T(), clblasColumnMajor, AT?clblasTrans:clblasNoTrans, BT?clblasTrans:clblasNoTrans,
                                                  M, N, K, 1, cl(A), 0, lda, cl(B), 0, ldb,
-                                                 0, cl(C), 0, ldc, 1, &cl(queue),0, NULL, NULL);}, sync));
+                                                 0, cl(C), 0, ldc, 1, &cl(queue),0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
       std::vector<float> cC(M*N), cA(M*K), cB(N*K);
       sc::copy(C, cC);
       sc::copy(A, cA);
       sc::copy(B, cB);
-      times.push_back(bench([&](){cblas_sgemm(CblasColMajor, AT?CblasTrans:CblasNoTrans, BT?CblasTrans:CblasNoTrans, M, N, K, 1, cA.data(), lda, cB.data(), ldb, 1, cC.data(), ldc);}, sync));
+      times.push_back(bench([&](){cblasGemm(T(), CblasColMajor, AT?CblasTrans:CblasNoTrans, BT?CblasTrans:CblasNoTrans, M, N, K, 1, cA.data(), lda, cB.data(), ldb, 1, cC.data(), ldc);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasSgemm(AT?'t':'n', BT?'t':'n', M, N, K, 1, (T*)cu(A), lda, (T*)cu(B), ldb, 1, (T*)cu(C), ldc);}, cusync));
+      times.push_back(bench([&](){cublasGemm(T(), AT?'t':'n', BT?'t':'n', M, N, K, 1, (T*)cu(A), lda, (T*)cu(B), ldb, 1, (T*)cu(C), ldc);}, cusync));
 #endif
       std::transform(times.begin(), times.end(), std::back_inserter(tflops), [&](double t){ return 2*M*N*K/t*1e-3;});
       auto fastest = tflops;
@@ -298,7 +334,7 @@ int main(int argc, char* argv[])
 
   sc::driver::backend::default_device = device_idx;
   std::cout << std::fixed << std::setprecision(2);
-  bench<float>(sc::FLOAT_TYPE, operation);
+  bench<double>(sc::DOUBLE_TYPE, operation);
 
 #ifdef BENCH_CLBLAS
   clblasTeardown();

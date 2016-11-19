@@ -53,12 +53,9 @@ driver::Program const & profiles::value_type::init(runtime::execution_handler co
     pname = symbolic::hash(expression.x());
   else
     pname = opt.program_name;
-
   driver::Program const * program = cache_.find(pname);
-
   if(program)
       return *program;
-
   std::string srcs;
    for(unsigned int i = 0 ; i < templates_.size() ; ++i)
      srcs += templates_[i]->generate(tools::to_string(i), expression.x(), context.device());
