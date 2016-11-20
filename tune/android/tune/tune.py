@@ -118,7 +118,7 @@ class Tuner:
         profiles, X, Y = [], [], []
         
         #Restore progress
-        savepath = os.path.join('save', operation.__name__)
+        savepath = os.path.join('save', tools.dtype.__name__, operation.__name__)
         if not os.path.exists(savepath):
             os.makedirs(savepath)
         try:
@@ -204,8 +204,8 @@ class Tuner:
         operation_name = operation.__name__
         if operation_name not in json_data:
             json_data[operation_name] = {}
-        json_data[operation_name]['float32'] = {}
-        D = json_data[operation_name]['float32']
+        json_data[operation_name][tools.dtype.__name__] = {}
+        D = json_data[operation_name][tools.dtype.__name__]
         if len(profiles) > 1:
             clf, nrmse = model.train(X, Y, profiles)
             D['predictor'] = [{'children_left': e.tree_.children_left.tolist(),
