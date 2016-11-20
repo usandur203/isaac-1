@@ -87,6 +87,10 @@ void bench(sc::numeric_type dtype, std::string operation)
 #ifdef BENCH_CUBLAS
   auto cusync = [&](){ cudaDeviceSynchronize(); };
 #endif
+
+  bool on_cl = queue.backend()==sc::driver::OPENCL;
+  bool on_cu = queue.backend()==sc::driver::CUDA;
+
   /*---------*/
   /*--BLAS1--*/
   /*---------*/
@@ -101,7 +105,7 @@ void bench(sc::numeric_type dtype, std::string operation)
       //Bench
       times.push_back(bench([&](){y = x + alpha*y;}, sync));
 #ifdef BENCH_CLBLAS
-      if(x.context().backend()==sc::driver::OPENCL)
+      if(on_cl)
         times.push_back(bench([&]() {clblasAxpy(T(), N, alpha, cl(x), 0, 1, cl(y), 0, 1, 1, &cl(queue), 0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
@@ -111,7 +115,8 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){cblasAxpy(T(), N, alpha, cx.data(), 1, cy.data(), 1);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasAxpy(T(), N, alpha, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
+      if(on_cu)
+        times.push_back(bench([&](){cublasAxpy(T(), N, alpha, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
 #endif
     }
   }
@@ -127,7 +132,7 @@ void bench(sc::numeric_type dtype, std::string operation)
       //Bench
       times.push_back(bench([&](){s = dot(x,y);}, sync));
 #ifdef BENCH_CLBLAS
-      if(x.context().backend()==sc::driver::OPENCL)
+      if(on_cl)
         times.push_back(bench([&]() {clblasDot(T(), N, cl(s), 0, cl(x), 0, 1, cl(y), 0, 1, cl(scratch), 1, &cl(queue), 0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
@@ -137,7 +142,8 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){cblasDot(T(), N, cx.data(), 1, cy.data(), 1);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasDot(T(), N, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
+      if(on_cu)
+        times.push_back(bench([&](){cublasDot(T(), N, (T*)cu(x), 1, (T*)cu(y), 1);}, cusync));
 #endif
     }
   }
@@ -182,7 +188,7 @@ void bench(sc::numeric_type dtype, std::string operation)
       //Bench
       times.push_back(bench([&](){y = AT?dot(A.T,x):dot(A,x);}, sync));
 #ifdef BENCH_CLBLAS
-      if(x.context().backend()==sc::driver::OPENCL)
+      if(on_cl)
         times.push_back(bench([&]() {clblasGemv(T(), clblasColumnMajor, AT?clblasTrans:clblasNoTrans, As1, As2, 1, cl(A), 0, lda, cl(x), 0, 1, 0, cl(y), 0, 1, 1, &cl(queue),0, nullptr, nullptr);}, sync));
 #endif
 #ifdef BENCH_CBLAS
@@ -193,7 +199,8 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){cblasGemv(T(), CblasColMajor, AT?CblasTrans:CblasNoTrans, As1, As2, 1, cA.data(), lda, cx.data(), 1, 0, cy.data(), 1);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasGemv(T(), AT?'t':'n', As1, As2, 1, (T*)cu(A), lda, (T*)cu(x), 1, 0, (T*)cu(y), 1);}, cusync));
+      if(on_cu)
+        times.push_back(bench([&](){cublasGemv(T(), AT?'t':'n', As1, As2, 1, (T*)cu(A), lda, (T*)cu(x), 1, 0, (T*)cu(y), 1);}, cusync));
 #endif
     }
   }
@@ -221,12 +228,14 @@ void bench(sc::numeric_type dtype, std::string operation)
     std::cout << color_stream(ITALIC) << color_stream(BOLD) ;
     std::cout << "BENCH\tM\tN\tK\tAT\tBT\tISAAC";
 #ifdef BENCH_CLBLAS
+    if(on_cl)
     std::cout << "\tclBLAS";
 #endif
 #ifdef BENCH_CBLAS
     std::cout << "\tBLAS";
 #endif
 #ifdef BENCH_CUBLAS
+    if(on_cu)
     std::cout << "\tcuBLAS";
 #endif
     std::cout << color_stream(RESET) << std::endl;
@@ -260,7 +269,7 @@ void bench(sc::numeric_type dtype, std::string operation)
                                         :(BT?dot(A,B.T)
                                             :dot(A,B));}, sync));
 #ifdef BENCH_CLBLAS
-      if(C.context().backend()==sc::driver::OPENCL)
+      if(on_cl)
         times.push_back(bench([&]() {clblasGemm(T(), clblasColumnMajor, AT?clblasTrans:clblasNoTrans, BT?clblasTrans:clblasNoTrans,
                                                  M, N, K, 1, cl(A), 0, lda, cl(B), 0, ldb,
                                                  0, cl(C), 0, ldc, 1, &cl(queue),0, nullptr, nullptr);}, sync));
@@ -273,7 +282,8 @@ void bench(sc::numeric_type dtype, std::string operation)
       times.push_back(bench([&](){cblasGemm(T(), CblasColMajor, AT?CblasTrans:CblasNoTrans, BT?CblasTrans:CblasNoTrans, M, N, K, 1, cA.data(), lda, cB.data(), ldb, 1, cC.data(), ldc);}, sync));
 #endif
 #ifdef BENCH_CUBLAS
-      times.push_back(bench([&](){cublasGemm(T(), AT?'t':'n', BT?'t':'n', M, N, K, 1, (T*)cu(A), lda, (T*)cu(B), ldb, 1, (T*)cu(C), ldc);}, cusync));
+      if(on_cu)
+        times.push_back(bench([&](){cublasGemm(T(), AT?'t':'n', BT?'t':'n', M, N, K, 1, (T*)cu(A), lda, (T*)cu(B), ldb, 1, (T*)cu(C), ldc);}, cusync));
 #endif
       std::transform(times.begin(), times.end(), std::back_inserter(tflops), [&](double t){ return 2*M*N*K/t*1e-3;});
       auto fastest = tflops;
@@ -292,6 +302,30 @@ void bench(sc::numeric_type dtype, std::string operation)
 
 }
 
+void handle_misusage(){
+  std::cerr << "usage : blas-bench --op {axpy, dot, gemv, gemm} [--dtype {float32, float64}] [--device DEVICE_IDX] " << std::endl;
+  std::cerr << "--op: operation to benchmark" << std::endl;
+  std::cerr << "--dtype: data-type to benchmark" << std::endl;
+  std::cerr << "--device: index of isaac device in [0, ..., ndevices - 1]" << std::endl;
+  exit(EXIT_FAILURE);
+}
+
+std::string getopt(std::vector<std::string> const & args,
+            std::string const & key,
+            std::string dft = "")
+{
+  auto it = std::find(args.begin(), args.end(), key);
+  if(it==args.end()){
+    if(dft.empty())
+      handle_misusage();
+    return dft;
+  }
+  auto next = it + 1;
+  if(next==args.end() || next->compare(0, 2, "--")==0)
+    handle_misusage();
+  return *next;
+}
+
 int main(int argc, char* argv[])
 {
   std::vector<std::string> args(argv, argv + argc);
@@ -300,41 +334,35 @@ int main(int argc, char* argv[])
 #endif
   sc::driver::backend::default_queue_properties = CL_QUEUE_PROFILING_ENABLE;
 
-  int device_idx = 0;
-  std::list<sc::driver::Context const *> contexts;
-  sc::driver::backend::contexts::get(contexts);
+  std::string operation = getopt(args, "--op");
+  std::string dtype = getopt(args, "--dtype", "float32");
+  int device;
+  try{
+    device = std::stoi(getopt(args, "--device", "0"));
+  }catch(...){ handle_misusage(); }
+  sc::driver::backend::default_device = device;
 
-  std::string operation;
-  if(contexts.size() > 1)
-  {
-    if(args.size() != 3)
-    {
-      std::cerr << "usage : blas-bench DEVICE_IDX OPERATION" << std::endl;
-      std::cout << "Devices available: " << std::endl;
-      unsigned int current=0;
-      for(sc::driver::Context const * context: contexts)
-      {
-        sc::driver::Device device = sc::driver::backend::queues::get(*context,0).device();
-        std::cout << current++ << ": " << device.name() << " on " << device.platform().name() << " " << device.platform().version() << std::endl;
-      }
-      exit(EXIT_FAILURE);
-    }
-    device_idx = atoi(argv[1]);
-    operation = args[2];
+  /* List devices */
+  std::cout << "Devices available:" << std::endl;
+  std::cout << "------------------" << std::endl;
+  size_t i = 0;
+  std::vector<sc::driver::Platform> platforms;
+  sc::driver::backend::platforms(platforms);
+  for(sc::driver::Platform const & pf: platforms){
+    std::vector<sc::driver::Device> devices;
+    pf.devices(devices);
+    for(sc::driver::Device const & device: devices)
+      std::cout << "[" << (i++==sc::driver::backend::default_device?"x":" ") << "]"
+                << " - " << device.name()
+                << " on " << pf.name() << std::endl;
   }
-  else
-  {
-    if(args.size() != 2)
-    {
-      std::cerr << "usage : blas-bench OPERATION" << std::endl;
-      exit(EXIT_FAILURE);
-    }
-    operation = args[1];
-  }
+  std::cout << "------------------" << std::endl;
 
-  sc::driver::backend::default_device = device_idx;
   std::cout << std::fixed << std::setprecision(2);
-  bench<double>(sc::DOUBLE_TYPE, operation);
+  if(dtype=="float32")
+    bench<float>(sc::FLOAT_TYPE, operation);
+  else
+    bench<double>(sc::DOUBLE_TYPE, operation);
 
 #ifdef BENCH_CLBLAS
   clblasTeardown();
