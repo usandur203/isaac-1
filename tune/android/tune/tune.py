@@ -46,10 +46,11 @@ def pow2range(a, b):
 
 class Tuner:
 
-    def __init__(self, logger, device, operation, json_path, progress_bar):
+    def __init__(self, logger, device, operation, dtype, json_path, progress_bar):
         self.logger = logger
         self.device = device
         self.operation = operation
+        self.dtype = dtype
         self.json_path = json_path
         self.progress_bar = progress_bar
         
@@ -57,7 +58,7 @@ class Tuner:
     def run(self, level = 'intermediate'): 
         
         assert level in ['simple', 'intermediate', 'full']
-        
+        tools.dtype = self.dtype
         device = self.device
         operation = self.operation
         context = sc.driver.context(device)
@@ -65,6 +66,7 @@ class Tuner:
         if self.logger:
             self.logger.info("----------------")
             self.logger.info(operation.__name__.replace('_','-').upper())
+            self.logger.info(tools.dtype.__name__.upper())
             self.logger.info("----------------")
 
         #BLAS1 training sizes
