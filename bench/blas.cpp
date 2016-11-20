@@ -303,8 +303,8 @@ void bench(sc::numeric_type dtype, std::string operation)
 }
 
 void handle_misusage(){
-  std::cerr << "usage : blas-bench --op {axpy, dot, gemv, gemm} [--dtype {float32, float64}] [--device DEVICE_IDX] " << std::endl;
-  std::cerr << "--op: operation to benchmark" << std::endl;
+  std::cerr << "Usage : blas-bench [--dtype {float32, float64}] [--device DEVICE_IDX] " << std::endl;
+//  std::cerr << "--op: operation to benchmark" << std::endl;
   std::cerr << "--dtype: data-type to benchmark" << std::endl;
   std::cerr << "--device: index of isaac device in [0, ..., ndevices - 1]" << std::endl;
   exit(EXIT_FAILURE);
@@ -312,6 +312,7 @@ void handle_misusage(){
 
 std::string getopt(std::vector<std::string> const & args,
             std::string const & key,
+            std::vector<std::string> const & set = {},
             std::string dft = "")
 {
   auto it = std::find(args.begin(), args.end(), key);
@@ -322,6 +323,8 @@ std::string getopt(std::vector<std::string> const & args,
   }
   auto next = it + 1;
   if(next==args.end() || next->compare(0, 2, "--")==0)
+    handle_misusage();
+  if(set.size() && std::find(set.begin(), set.end(), *next)==set.end())
     handle_misusage();
   return *next;
 }
@@ -334,11 +337,11 @@ int main(int argc, char* argv[])
 #endif
   sc::driver::backend::default_queue_properties = CL_QUEUE_PROFILING_ENABLE;
 
-  std::string operation = getopt(args, "--op");
-  std::string dtype = getopt(args, "--dtype", "float32");
+  std::string operation = "gemm";
+  std::string dtype = getopt(args, "--dtype", {"float32", "float64"}, "float32");
   int device;
   try{
-    device = std::stoi(getopt(args, "--device", "0"));
+    device = std::stoi(getopt(args, "--device", {}, "0"));
   }catch(...){ handle_misusage(); }
   sc::driver::backend::default_device = device;
 
