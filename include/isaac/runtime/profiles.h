@@ -24,6 +24,7 @@
 
 #include <map>
 #include <memory>
+#include <fstream>
 
 #include "isaac/driver/command_queue.h"
 #include "isaac/driver/device.h"
@@ -52,17 +53,16 @@ public:
       driver::Program const & init(runtime::execution_handler const &);
 
     public:
-      value_type(expression_type, numeric_type, predictors::random_forest const &, std::vector< std::shared_ptr<templates::base> > const &, driver::CommandQueue const &);
-      value_type(numeric_type, std::shared_ptr<templates::base> const &, driver::CommandQueue const &);
+      value_type(numeric_type, std::vector<std::shared_ptr<templates::base>> const &, driver::CommandQueue const &);
       void execute(runtime::execution_handler const &);
       templates_container const & templates() const;
 
     private:
       templates_container templates_;
-      std::shared_ptr<predictors::random_forest> predictor_;
       std::map<std::vector<int_t>, int> labels_;
       driver::CommandQueue queue_;
-      driver::ProgramCache & cache_;
+      driver::ProgramCache & programs_;
+      std::fstream labels_cache_;
     };
 
     typedef std::map<std::pair<expression_type, numeric_type>, std::shared_ptr<value_type> > map_type;

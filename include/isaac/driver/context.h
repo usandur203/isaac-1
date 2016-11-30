@@ -62,13 +62,14 @@ public:
   //Accessors
   backend_type backend() const;
   Device const & device() const;
+  std::string const & cache_prefix() const;
   handle_type const & handle() const;
 
 private:
 DISABLE_MSVC_WARNING_C4251
   backend_type backend_;
   Device device_;
-  std::string cache_path_;
+  std::string cache_prefix_;
   handle_type h_;
 RESTORE_MSVC_WARNING_C4251
 };

@@ -59,17 +59,17 @@ std::string Context::cache_path()
 
 
 
-Context::Context(CUcontext const & context, bool take_ownership) : backend_(CUDA), device_(device(context), false), cache_path_(cache_path()), h_(backend_, take_ownership)
+Context::Context(CUcontext const & context, bool take_ownership) : backend_(CUDA), device_(device(context), false), cache_prefix_(cache_path()), h_(backend_, take_ownership)
 {
     h_.cu() = context;
 }
 
-Context::Context(cl_context const & context, bool take_ownership) : backend_(OPENCL), device_(ocl::info<CL_CONTEXT_DEVICES>(context)[0], false), cache_path_(cache_path()), h_(backend_, take_ownership)
+Context::Context(cl_context const & context, bool take_ownership) : backend_(OPENCL), device_(ocl::info<CL_CONTEXT_DEVICES>(context)[0], false), cache_prefix_(cache_path()), h_(backend_, take_ownership)
 {
     h_.cl() = context;
 }
 
-Context::Context(Device const & device) : backend_(device.backend_), device_(device), cache_path_(cache_path()), h_(backend_, true)
+Context::Context(Device const & device) : backend_(device.backend_), device_(device), cache_prefix_(cache_path()), h_(backend_, true)
 {
   switch(backend_)
   {
@@ -88,6 +88,9 @@ Context::Context(Device const & device) : backend_(device.backend_), device_(dev
 
 Context::handle_type const & Context::handle() const
 { return h_; }
+
+std::string const & Context::cache_prefix() const
+{ return cache_prefix_; }
 
 Device const & Context::device() const
 { return device_; }

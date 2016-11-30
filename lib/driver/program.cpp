@@ -33,6 +33,7 @@
 #include "tinysha1/sha1.hpp"
 
 #include "isaac/tools/cpp/string.hpp"
+#include "isaac/tools/sys/mkdir.hpp"
 
 namespace isaac
 {
@@ -42,8 +43,8 @@ namespace driver
 
 Program::Program(Context const & context, std::string const & source) : backend_(context.backend_), context_(context), source_(source), h_(backend_, true)
 {
-//  std::cout << source << std::endl;
-  std::string cache_path = context.cache_path_;
+  std::string cache_path = context.cache_prefix() + "/programs/";
+  tools::mkpath(cache_path);
   switch(backend_)
   {
     case CUDA:

@@ -42,6 +42,21 @@ enum expression_type
   GEMM_TT
 };
 
+inline size_t nshapes(expression_type type){
+  switch(type){
+    case GEMM_NN:
+    case GEMM_NT:
+    case GEMM_TN:
+    case GEMM_TT: return 3;
+
+    case REDUCE_2D_ROWS:
+    case REDUCE_2D_COLS:
+    case ELEMENTWISE_2D: return 2;
+
+    default: return 1;
+  }
+}
+
 inline expression_type expression_type_from_string(std::string const & name)
 {
   if(name=="elementwise_1d") return ELEMENTWISE_1D;

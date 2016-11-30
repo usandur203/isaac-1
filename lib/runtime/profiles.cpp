@@ -39,59 +39,82 @@
 #include "isaac/tools/sys/getenv.hpp"
 #include "isaac/tools/cpp/string.hpp"
 #include "isaac/tools/cpp/timer.hpp"
+#include "isaac/tools/sys/mkdir.hpp"
+
 namespace isaac
 {
 namespace runtime
 {
+
+template <typename Word>
+std::ostream& write_word(std::ostream& outs, Word value ){
+  for (unsigned size = sizeof( Word ); size; --size, value >>= 8)
+    outs.put( static_cast <char> (value & 0xFF) );
+  return outs;
+}
+
+template <typename Word>
+std::istream& read_word( std::istream& ins, Word& value){
+  value = 0;
+  for (unsigned size = 0; size < sizeof( Word ); ++size)
+    value |= ins.get() << (8 * size);
+  return ins;
+}
 
 driver::Program const & profiles::value_type::init(runtime::execution_handler const & expression)
 {
   driver::Context & context = (driver::Context&)expression.x().context();
   std::string pname;
   runtime::compilation_options_type const & opt = expression.compilation_options();
-  if(opt.program_name.empty())
+  pname = opt.program_name;
+  if(pname.empty())
     pname = symbolic::hash(expression.x());
-  else
-    pname = opt.program_name;
-
-  driver::Program const * program = cache_.find(pname);
-
+  driver::Program const * program = programs_.find(pname);
   if(program)
       return *program;
-
   std::string srcs;
    for(unsigned int i = 0 ; i < templates_.size() ; ++i)
      srcs += templates_[i]->generate(tools::to_string(i), expression.x(), context.device());
-   return cache_.add(context, pname, srcs);
+   return programs_.add(context, pname, srcs);
 }
 
-profiles::value_type::value_type(expression_type etype, numeric_type dtype, predictors::random_forest const & predictor, std::vector< std::shared_ptr<templates::base> > const & templates, driver::CommandQueue const & queue) :
-  templates_(templates), predictor_(new predictors::random_forest(predictor)), queue_(queue), cache_(driver::backend::programs::get(queue,etype,dtype))
+profiles::value_type::value_type(numeric_type dtype, std::vector< std::shared_ptr<templates::base> > const & templates, driver::CommandQueue const & queue) :
+  templates_(templates), queue_(queue), programs_(driver::backend::programs::get(queue,templates[0]->type(),dtype))
 {
-  cache_.clear();
-}
-
-
-profiles::value_type::value_type(numeric_type dtype, std::shared_ptr<templates::base> const & tp, driver::CommandQueue const & queue) : templates_(1,tp), queue_(queue), cache_(driver::backend::programs::get(queue,tp->type(),dtype))
-{
-  cache_.clear();
+  expression_type type = templates[0]->type();
+  programs_.clear();
+  std::string labels_path = queue_.context().cache_prefix() + "/labels/";
+  labels_path += std::to_string(type) + "_" + to_string(dtype);
+  tools::mkpath(labels_path);
+  labels_cache_.open(labels_path.c_str(), std::ios::in | std::ios::binary);
+  if(labels_cache_){
+    std::vector<int_t> shapes(nshapes(type));
+    uint8_t k;
+    while (labels_cache_.peek()!=std::fstream::traits_type::eof()) {
+      for(auto& s: shapes)
+        read_word(labels_cache_, s);
+      read_word(labels_cache_, k);
+      labels_.insert({shapes, k});
+    }
+    labels_cache_.close();
+  }
+  labels_cache_.open(labels_path.c_str(), std::ios::out | std::ios::app | std::ios::binary);
 }
 
 void profiles::value_type::execute(runtime::execution_handler const & expr)
 {
-  static const size_t N_TOP = 5;
   static const int MAX_TEMPORARY_WORKSPACE = 1e6;
   expression_tree const & tree = expr.x();
   driver::Program const & program = init(expr);
-  std::vector<int_t> x = templates_[0]->input_sizes(tree);
+  std::vector<int_t> shapes = templates_[0]->input_sizes(tree);
 
-  //Cached
   size_t label = 0;
-  auto it = labels_.find(x);
+  auto it = labels_.find(shapes);
+  //Cached
   if(it!=labels_.end())
     label = it->second;
   //Not cached
-  else if(predictor_)
+  else
   {
     expression_tree::node const & root = tree[tree.root()];
     expression_tree::node const & left = tree[root.binary_operator.lhs];
@@ -107,13 +130,7 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
     }
     tools::Timer tmr;
     std::vector<double> times;
-    std::vector<float> perf = predictor_->predict(x);
-    std::vector<size_t> idx(perf.size());
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(), [&perf](size_t i1, size_t i2) {return perf[i1] > perf[i2];});
-    bool valid_found = false;
-    for(size_t k = 0 ; k < std::min<size_t>(N_TOP, idx.size()) || !valid_found ; k++){
-      size_t i = idx[k];
+    for(size_t i = 0 ; i < templates_.size() ; i++){
       if(templates_[i]->temporary_workspace(tree) > MAX_TEMPORARY_WORKSPACE){
         times.push_back(INFINITY);
         continue;
@@ -129,15 +146,18 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
           total_time += ctimes.back();
         }
         times.push_back( *std::min_element(ctimes.begin(), ctimes.end()));
-        valid_found = true;
       }catch(...){
         times.push_back(INFINITY);
       }
     }
-    label = idx[std::distance(times.begin(),std::min_element(times.begin(), times.end()))];
+    label = std::distance(times.begin(),std::min_element(times.begin(), times.end()));
     if(modify_output)
       *out = execution_handler(-(-*bkp), execution_options_type(queue_));
-    labels_.insert({x, label});
+    labels_.insert({shapes, label});
+    for(auto s: shapes)
+      write_word(labels_cache_, s);
+    write_word(labels_cache_, (uint8_t)label);
+    labels_cache_.flush();
   }
   if(templates_[label]->temporary_workspace(expr.x()) > MAX_TEMPORARY_WORKSPACE)
     throw operation_not_supported_exception("Running this operation would require an overly large temporary.");
@@ -214,13 +234,7 @@ void profiles::import(std::string const & str, driver::CommandQueue const & queu
             else
                 templates.push_back(create(operation, rapidjson::to_int_array<int>(profiles[i])));
           }
-          if(templates.size()>1){
-            // Get predictor
-            predictors::random_forest predictor(document[opcstr][dtcstr]["predictor"]);
-            result[{etype, dtype}] = std::make_shared<value_type>(etype, dtype, predictor, templates, queue);
-          }
-          else
-            result[{etype, dtype}] = std::make_shared<value_type>(dtype, templates[0], queue);
+          result[{etype, dtype}] = std::make_shared<value_type>(dtype, templates, queue);
         }
       }
     }
