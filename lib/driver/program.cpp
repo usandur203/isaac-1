@@ -94,27 +94,6 @@ Program::Program(Context const & context, std::string const & source) : backend_
         std::ofstream cached(fname.c_str(),std::ios::binary);
         cached.write((char*)ptx.data(), std::streamsize(ptx_size));
       }
-
-//    std::ofstream oss(sha1 + ".cu", std::ofstream::out | std::ofstream::trunc);
-//    oss << source << std::endl;
-//    oss.close();
-
-//    system(("/usr/local/cuda-7.0/bin/nvcc " + sha1 + ".cu -gencode arch=compute_50,code=sm_50 -cubin").c_str());
-//    system(("perl /maxas.pl -e " + sha1 + ".cubin > " + sha1 + ".sass").c_str());
-//    system(("perl /maxas.pl -i --noreuse" + sha1 + ".sass " + sha1 + ".cubin").c_str());
-
-//    std::ifstream ifs(sha1 + ".cubin");
-//    std::cout << sha1 << std::endl;
-//    std::string str;
-
-//    ifs.seekg(0, std::ios::end);
-//    str.reserve(ifs.tellg());
-//    ifs.seekg(0, std::ios::beg);
-
-//    str.assign((std::istreambuf_iterator<char>(ifs)),
-//                std::istreambuf_iterator<char>());
-//    dispatch::cuModuleLoadDataEx(&h_.cu(), str.c_str(), 0, NULL, NULL);
-
       break;
     }
     case OPENCL:
