@@ -66,7 +66,7 @@ double bench(OP const & op, SYNC const & sync)
   double total_time = 0;
   op();
   sync();
-  while(total_time*1e-9 < 2e-1){
+  while(total_time*1e-9 < 1e-3){
     tmr.start();
     op();
     sync();
@@ -82,14 +82,14 @@ void print_results_header(std::vector<std::string> sections, bool on_cl, bool on
     std::cout << "ISAAC";
 #ifdef BENCH_CLBLAS
     if(on_cl)
-    std::cout << "\tclBLAS";
+      std::cout << "\tclBLAS";
 #endif
 #ifdef BENCH_CBLAS
     std::cout << "\tBLAS";
 #endif
 #ifdef BENCH_CUBLAS
     if(on_cu)
-    std::cout << "\tcuBLAS";
+      std::cout << "\tcuBLAS";
 #endif
     std::cout << color_stream(RESET) << std::endl;
 }

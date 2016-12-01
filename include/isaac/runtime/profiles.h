@@ -31,7 +31,6 @@
 #include "isaac/common/expression_type.h"
 #include "isaac/common/numeric_type.h"
 #include "isaac/jit/generation/base.h"
-#include "isaac/runtime/predictors/random_forest.h"
 #include "isaac/jit/syntax/expression/expression.h"
 
 namespace isaac
