@@ -206,12 +206,5 @@ class Tuner:
             json_data[operation_name] = {}
         json_data[operation_name][tools.dtype.__name__] = {}
         D = json_data[operation_name][tools.dtype.__name__]
-        if len(profiles) > 1:
-            clf, nrmse = model.train(X, Y, profiles)
-            D['predictor'] = [{'children_left': e.tree_.children_left.tolist(),
-                                'children_right': e.tree_.children_right.tolist(),
-                                'threshold': e.tree_.threshold.astype('float64').tolist(),
-                                'feature': e.tree_.feature.astype('float64').tolist(),
-                                'value': e.tree_.value[:,:,0].astype('float64').tolist()} for e in clf.estimators_]
         D['profiles'] = [tools.convert(x) for x in profiles]
         json.dump(json_data, open(json_path,'w'))
