@@ -61,7 +61,7 @@ public:
       std::map<std::vector<int_t>, int> labels_;
       driver::CommandQueue queue_;
       driver::ProgramCache & programs_;
-      std::fstream labels_cache_;
+      std::shared_ptr<std::fstream> labels_cache_;
     };
 
     typedef std::map<std::pair<expression_type, numeric_type>, std::shared_ptr<value_type> > map_type;

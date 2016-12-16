@@ -79,26 +79,27 @@ driver::Program const & profiles::value_type::init(runtime::execution_handler co
 }
 
 profiles::value_type::value_type(numeric_type dtype, std::vector< std::shared_ptr<templates::base> > const & templates, driver::CommandQueue const & queue) :
-  templates_(templates), queue_(queue), programs_(driver::backend::programs::get(queue,templates[0]->type(),dtype))
+  templates_(templates), queue_(queue), programs_(driver::backend::programs::get(queue,templates[0]->type(),dtype)), labels_cache_(new std::fstream(),
+                                                                                                                                   [](std::fstream* ptr){ptr->close();})
 {
   expression_type type = templates[0]->type();
   programs_.clear();
   std::string labels_path = queue_.context().cache_prefix() + "/labels/";
   labels_path += std::to_string(type) + "_" + to_string(dtype);
   tools::mkpath(labels_path);
-  labels_cache_.open(labels_path.c_str(), std::ios::in | std::ios::binary);
+  labels_cache_->open(labels_path.c_str(), std::ios::in | std::ios::binary);
   if(labels_cache_){
     std::vector<int_t> shapes(nshapes(type));
     uint8_t k;
-    while (labels_cache_.peek()!=std::fstream::traits_type::eof()) {
+    while (labels_cache_->peek()!=std::fstream::traits_type::eof()) {
       for(auto& s: shapes)
-        read_word(labels_cache_, s);
-      read_word(labels_cache_, k);
+        read_word(*labels_cache_, s);
+      read_word(*labels_cache_, k);
       labels_.insert({shapes, k});
     }
-    labels_cache_.close();
+    labels_cache_->close();
   }
-  labels_cache_.open(labels_path.c_str(), std::ios::out | std::ios::app | std::ios::binary);
+  labels_cache_->open(labels_path.c_str(), std::ios::out | std::ios::app | std::ios::binary);
 }
 
 void profiles::value_type::execute(runtime::execution_handler const & expr)
@@ -155,9 +156,9 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
       *out = execution_handler(-(-*bkp), execution_options_type(queue_));
     labels_.insert({shapes, label});
     for(auto s: shapes)
-      write_word(labels_cache_, s);
-    write_word(labels_cache_, (uint8_t)label);
-    labels_cache_.flush();
+      write_word(*labels_cache_, s);
+    write_word(*labels_cache_, (uint8_t)label);
+    labels_cache_->flush();
   }
   if(templates_[label]->temporary_workspace(expr.x()) > MAX_TEMPORARY_WORKSPACE)
     throw operation_not_supported_exception("Running this operation would require an overly large temporary.");

@@ -162,17 +162,17 @@ int gemm::is_invalid_impl(driver::Device const &, expression_tree const &) const
   if ( kS_ % kL_ == 0)
     return TEMPLATE_KS_MUST_BE_SMALLER_THAN_KL;
 
-  if ((lf0_*lf1_) !=(ls0_*ls1_))
+  if ((alf0_*alf1_) !=(ls0_*ls1_))
     return TEMPLATE_LOCAL_FETCH_PRODUCT_MUST_MATCH_LOCAL_SIZE_PRODUCT;
 
   {
     unsigned int bound1 = (A_trans_=='N')?kL_:mL_;
     unsigned int bound0 = (A_trans_=='N')?mL_:kL_;
 
-    if (lf1_>0 && (bound1 % lf1_)> 0)
+    if (alf1_>0 && (bound1 % alf1_)> 0)
       return A_trans_=='N'?TEMPLATE_LOCAL_FETCH_1_MUST_BE_KL_MULTIPLE:TEMPLATE_LOCAL_FETCH_1_MUST_BE_ML_MULTIPLE;
 
-    if (lf0_>0 && (bound0 % (lf0_*vwidth_)) > 0)
+    if (alf0_>0 && (bound0 % (alf0_*vwidth_)) > 0)
       return A_trans_=='N'?TEMPLATE_LOCAL_FETCH_0_MUST_BE_NL_MULTIPLE:TEMPLATE_LOCAL_FETCH_0_MUST_BE_KL_MULTIPLE;
 
   }
@@ -181,10 +181,10 @@ int gemm::is_invalid_impl(driver::Device const &, expression_tree const &) const
     unsigned int bound1 = (B_trans_=='T')?kL_:nL_;
     unsigned int bound0 = (B_trans_=='T')?nL_:kL_;
 
-    if (lf1_>0 && (bound1 % lf1_)> 0)
+    if (alf1_>0 && (bound1 % alf1_)> 0)
       return B_trans_=='T'?TEMPLATE_LOCAL_FETCH_1_MUST_BE_KL_MULTIPLE:TEMPLATE_LOCAL_FETCH_1_MUST_BE_ML_MULTIPLE;
 
-    if (lf0_>0 && (bound0 % (lf0_*vwidth_)) > 0)
+    if (alf0_>0 && (bound0 % (alf0_*vwidth_)) > 0)
       return B_trans_=='T'?TEMPLATE_LOCAL_FETCH_1_MUST_BE_KL_MULTIPLE:TEMPLATE_LOCAL_FETCH_1_MUST_BE_ML_MULTIPLE;
 
   }
@@ -260,8 +260,8 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   size_t lndb = (B_trans_=='T')?kL_:nL_;
   stream << "$LOCAL " << sdtype << " lA[" << llda*lnda << "];" << std::endl;
   stream << "$LOCAL " << sdtype << " lB[" << lldb*lndb << "];" << std::endl;
-  unsigned int npA = mL_/(A_trans_=='N'?lf0_*vwidth_:lf1_);
-  unsigned int npB = nL_/(B_trans_=='T'?lf0_*vwidth_:lf1_);
+  unsigned int npA = mL_/(A_trans_=='N'?alf0_*vwidth_:alf1_);
+  unsigned int npB = nL_/(B_trans_=='T'?alf0_*vwidth_:alf1_);
   stream << "$GLOBAL " << sdtype << "* Ai[" << npA << "];" << std::endl;
   stream << "$GLOBAL " << sdtype << "* Bi[" << npB << "];" << std::endl;
   stream << std::endl;
@@ -292,8 +292,8 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   }
 
   stream << "idt = " << ls0_ << "*ids.w + ids.z;" << std::endl;
-  stream << "idT.y = idt/" << lf0_ << ";" << std::endl;
-  stream << "idT.x = idt - " << lf0_ << "*idT.y;" << std::endl;
+  stream << "idT.y = idt/" << alf0_ << ";" << std::endl;
+  stream << "idT.x = idt - " << alf0_ << "*idT.y;" << std::endl;
   stream << std::endl;
 
   stream << "//Adjust pointers and bounds per work-item" << std::endl;
@@ -362,15 +362,15 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
 
   for(unsigned int i = 0 ; i < npA ; i++ )
     if (A_trans_=='N')
-      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*lf0_*vwidth_) + " < M", "(int)((idT.x + " + to_string(i*lf0_*vwidth_) + ")" + ASTRIDE1 + ")", "0") << ";" << std::endl;
+      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < M", "(int)((idT.x + " + to_string(i*alf0_*vwidth_) + ")" + ASTRIDE1 + ")", "0") << ";" << std::endl;
     else
-      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*lf1_) + " < M", "(int)((idT.y + " + to_string(i*lf1_) + ")*lda)", "0") << ";" << std::endl;
+      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < M", "(int)((idT.y + " + to_string(i*alf1_) + ")*lda)", "0") << ";" << std::endl;
 
   for(unsigned int i = 0 ; i < npB ; i++ )
     if (B_trans_=='T')
-      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*lf0_*vwidth_) + " < N", "(int)((idT.x + " + to_string(i*lf0_*vwidth_) + ")" + BSTRIDE1 + ")", "0") << ";" << std::endl;
+      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < N", "(int)((idT.x + " + to_string(i*alf0_*vwidth_) + ")" + BSTRIDE1 + ")", "0") << ";" << std::endl;
     else
-      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*lf1_) + " < N", "(int)((idT.y + " + to_string(i*lf1_) + ")*ldb)", "0") << ";" << std::endl;
+      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < N", "(int)((idT.y + " + to_string(i*alf1_) + ")*ldb)", "0") << ";" << std::endl;
 
   stream << std::endl;
   stream << "//Outer loop" << std::endl;
@@ -388,10 +388,10 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
     stream << "//Fetch A to local memory" << std::endl;
     if (A_trans_=='N')
     {
-      for(unsigned int k = 0; k < kL_; k += lf1_)
-        for(unsigned int m = 0; m < mL_; m += lf0_*vwidth_)
+      for(unsigned int k = 0; k < kL_; k += alf1_)
+        for(unsigned int m = 0; m < mL_; m += alf0_*vwidth_)
         {
-          std::string mm = to_string(m/(vwidth_*lf0_));
+          std::string mm = to_string(m/(vwidth_*alf0_));
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
@@ -402,10 +402,10 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
     }
     else
     {
-      for(unsigned int k = 0; k < kL_; k += lf0_*vwidth_)
-        for(unsigned int m = 0; m < mL_; m += lf1_)
+      for(unsigned int k = 0; k < kL_; k += alf0_*vwidth_)
+        for(unsigned int m = 0; m < mL_; m += alf1_)
         {
-          std::string mm = to_string(m/lf1_);
+          std::string mm = to_string(m/alf1_);
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
@@ -419,10 +419,10 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
     stream << "//Fetch B to local memory" << std::endl;
     if (B_trans_=='T')
     {
-      for(unsigned int k = 0; k < kL_; k += lf1_)
-        for(unsigned int n = 0; n < nL_; n += lf0_*vwidth_)
+      for(unsigned int k = 0; k < kL_; k += alf1_)
+        for(unsigned int n = 0; n < nL_; n += alf0_*vwidth_)
         {
-          std::string nn = to_string(n/(vwidth_*lf0_));
+          std::string nn = to_string(n/(vwidth_*alf0_));
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
@@ -433,10 +433,10 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
     }
     else
     {
-      for(unsigned int k = 0; k < kL_; k += lf0_*vwidth_)
-        for(unsigned int n = 0; n < nL_; n += lf1_)
+      for(unsigned int k = 0; k < kL_; k += alf0_*vwidth_)
+        for(unsigned int n = 0; n < nL_; n += alf1_)
         {
-          std::string nn = to_string(n/lf1_);
+          std::string nn = to_string(n/alf1_);
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
@@ -553,14 +553,14 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   if(A_trans_=='N' || B_trans_=='T')
   {
     stream << "int Ky = K - idT.y;" << std::endl;
-    for(unsigned int k = 0; k < kL_; k += lf1_)
+    for(unsigned int k = 0; k < kL_; k += alf1_)
       stream << "int condy" << k << " = " << k << " < Ky;" << std::endl;
   }
 
   if(A_trans_=='T' || B_trans_=='N')
   {
     stream << "int Kx = K - idT.x;" << std::endl;
-    for(unsigned int k = 0 ; k < kL_ ; k += lf0_*vwidth_)
+    for(unsigned int k = 0 ; k < kL_ ; k += alf0_*vwidth_)
       for(unsigned int s = 0 ; s < vwidth_ ; ++s)
         stream << "int condx" << k + s << " = " << k + s << " < Kx;" << std::endl;
   }
@@ -748,12 +748,9 @@ void gemm::enqueue_block(driver::CommandQueue & queue, int_t M, int_t N, int_t K
 
 }
 
-gemm::gemm(unsigned int vwidth
-           ,int_t ls0, int_t kL, int_t ls1, int_t D
-           ,int_t ms, int_t ks, int_t ns
-           ,int_t lf0, int_t lf1, char A_trans, char B_trans) :
+gemm::gemm(unsigned int vwidth, int_t ls0, int_t kL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1, char A_trans, char B_trans):
   parameterized_base(vwidth, ls0, ls1), mL_(ms*ls0), kL_(kL), nL_(ns*ls1), depth_(D), mS_(ms), kS_(ks)
-                                     , nS_(ns), lf0_(lf0), lf1_(lf1), A_trans_(A_trans), B_trans_(B_trans)
+                                     , nS_(ns), alf0_(alf0), alf1_(alf1), blf0_(blf0), blf1_(blf1), A_trans_(A_trans), B_trans_(B_trans)
 {
   if(A_trans_=='N' && B_trans_=='N') type_ = GEMM_NN;
   else if(A_trans_=='T' && B_trans_=='N') type_ = GEMM_TN;
@@ -785,36 +782,40 @@ void gemm::enqueue(driver::CommandQueue & queue, driver::Program const & program
 }
 
 //
-gemm_nn::gemm_nn(unsigned int vwidth
-                 , int_t ls0, int_t KL, int_t ls1, int_t D
-                 , int_t ms, int_t ks, int_t ns
-                 , int_t lf0, int_t lf1) :
-  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, 'N', 'N')
-{
-}
+gemm_nn::gemm_nn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
+  gemm_nn(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
+{}
+
+gemm_nn::gemm_nn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
+  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'N', 'N')
+{}
+
 
 //
-gemm_tn::gemm_tn(unsigned int vwidth
-                 , int_t ls0, int_t KL, int_t ls1, int_t D
-                 , int_t ms, int_t ks, int_t ns
-                 , int_t lf0, int_t lf1) :
-  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, 'T', 'N')
+gemm_tn::gemm_tn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
+  gemm_tn(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
+{ }
+
+gemm_tn::gemm_tn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
+  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'T', 'N')
 { }
 
 //
-gemm_nt::gemm_nt(unsigned int vwidth
-                 , int_t ls0, int_t KL, int_t ls1, int_t D
-                 , int_t ms, int_t ks, int_t ns
-                 , int_t lf0, int_t lf1) :
-  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, 'N', 'T')
+gemm_nt::gemm_nt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
+  gemm_nt(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
+{ }
+
+gemm_nt::gemm_nt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
+  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'N', 'T')
 { }
 
 //
-gemm_tt::gemm_tt(unsigned int vwidth
-                 , int_t ls0, int_t KL, int_t ls1, int_t D
-                 , int_t ms, int_t ks, int_t ns
-                 , int_t lf0, int_t lf1) :
-  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, 'T', 'T')
+gemm_tt::gemm_tt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
+  gemm_tt(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
+{ }
+
+gemm_tt::gemm_tt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
+  gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'T', 'T')
 { }
 
 }

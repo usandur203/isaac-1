@@ -50,14 +50,12 @@ void export_templates()
 
   //Base
   {
-    #define __PROP(name) .def_readonly(#name, &tpt::base::name)
     bp::class_<tpt::base, std::shared_ptr<tpt::base>, boost::noncopyable>("base", bp::no_init)
             .def("lmem_usage", &tpt::base::lmem_usage)
             .def("registers_usage", &tpt::base::registers_usage)
             .def("is_invalid", &tpt::base::is_invalid)
             .def("input_sizes", &detail::input_sizes)
         ;
-    #undef __PROP
   }
 
   bp::class_<tpt::parameterized_base, bp::bases<tpt::base>, boost::noncopyable>("parameterized_base", bp::no_init)
@@ -66,6 +64,7 @@ void export_templates()
 
   bp::class_<tpt::external_base, bp::bases<tpt::base>, boost::noncopyable>("external_base", bp::no_init);
 
+  //Templates
 #define WRAP_BASE(name) bp::class_<tpt::name, bp::bases<tpt::parameterized_base>, boost::noncopyable>(#name, bp::no_init);
 
   #define WRAP_TEMPLATE(name, basename, ...) bp::class_<tpt::name, std::shared_ptr<tpt::name>, bp::bases<basename>>(#name, bp::init<__VA_ARGS__>())\

@@ -106,7 +106,8 @@ namespace detail
   std::shared_ptr<rt::profiles::value_type> construct_model(bp::object const & tp, bp::object dtype, sc::driver::CommandQueue & queue)
   {
       tpt::base* raw =  bp::extract<tpt::base*>(tp);
-      return std::make_shared<rt::profiles::value_type>(tools::extract_dtype(dtype), raw->getptr(), queue);
+      std::vector<std::shared_ptr<tpt::base>> templates = {raw->getptr()};
+      return std::make_shared<rt::profiles::value_type>(tools::extract_dtype(dtype), templates, queue);
   }
 
   std::shared_ptr<sc::array>

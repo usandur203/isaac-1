@@ -66,7 +66,7 @@ double bench(OP const & op, SYNC const & sync)
   double total_time = 0;
   op();
   sync();
-  while(total_time*1e-9 < 1e-3){
+  while(total_time*1e-9 < 1e-1){
     tmr.start();
     op();
     sync();
