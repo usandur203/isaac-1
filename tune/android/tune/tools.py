@@ -146,7 +146,7 @@ def genetic_infos_of(template):
     elif issubclass(template, sc.templates.reduce_2d):
         return {'categorical': [], 'nbits': [3,3,3,3,4]}
     elif issubclass(template, sc.templates.gemm):
-        return {'categorical': [], 'nbits': [3,3,3,3,3,2,2,2,3,3]}
+        return {'categorical': [], 'nbits': [3,3,3,3,3,2,2,2,3,3,3,3]}
 
 def convert(profile):
 	if isinstance(profile, str):

@@ -257,6 +257,7 @@ void bench(sc::numeric_type dtype, std::string operation)
   if(operation.substr(0,4)=="gemm")
   {
     std::vector<std::tuple<std::string, int_t, int_t, int_t, std::string, std::string> > MNKs;
+    MNKs.push_back(make_tuple("Cov",896,896,896,"N","N"));
     //DeepBench
     for(size_t MK: std::vector<size_t>{1760, 2048, 2560})
       for(size_t N: std::vector<size_t>{16, 32, 64, 128, 7000})

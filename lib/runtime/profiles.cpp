@@ -194,13 +194,13 @@ std::shared_ptr<templates::base> profiles::create(std::string const & template_n
   else if(template_name.find("reduce_2d_cols")!=std::string::npos)
     return std::shared_ptr<templates::base>(new templates::reduce_2d_cols(x[0], x[1], x[2], x[3], x[4]));
   else if(template_name.find("gemm_nn")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_nn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9]));
+    return std::shared_ptr<templates::base>(new templates::gemm_nn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
   else if(template_name.find("gemm_tn")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_tn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9]));
+    return std::shared_ptr<templates::base>(new templates::gemm_tn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
   else if(template_name.find("gemm_nt")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_nt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9]));
+    return std::shared_ptr<templates::base>(new templates::gemm_nt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
   else if(template_name.find("gemm_tt")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_tt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9]));
+    return std::shared_ptr<templates::base>(new templates::gemm_tt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
   else
     throw std::invalid_argument("Invalid expression: " + template_name);
 }

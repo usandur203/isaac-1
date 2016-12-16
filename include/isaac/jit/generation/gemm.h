@@ -89,14 +89,12 @@ private:
 class gemm_nn : public gemm
 {
 public:
-  gemm_nn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D,int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1);
   gemm_nn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D,int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1);
 };
 
 class gemm_tn : public gemm
 {
 public:
-  gemm_tn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1);
   gemm_tn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1);
 };
 
@@ -104,7 +102,6 @@ public:
 class gemm_nt : public gemm
 {
 public:
-  gemm_nt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1);
   gemm_nt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1);
 };
 
@@ -112,7 +109,6 @@ public:
 class gemm_tt : public gemm
 {
 public:
-  gemm_tt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1);
   gemm_tt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1);
 
 };

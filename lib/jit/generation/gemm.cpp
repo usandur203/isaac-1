@@ -164,7 +164,6 @@ int gemm::is_invalid_impl(driver::Device const &, expression_tree const &) const
 
   if ((alf0_*alf1_) !=(ls0_*ls1_))
     return TEMPLATE_LOCAL_FETCH_PRODUCT_MUST_MATCH_LOCAL_SIZE_PRODUCT;
-
   {
     unsigned int bound1 = (A_trans_=='N')?kL_:mL_;
     unsigned int bound0 = (A_trans_=='N')?mL_:kL_;
@@ -177,14 +176,16 @@ int gemm::is_invalid_impl(driver::Device const &, expression_tree const &) const
 
   }
 
+  if ((blf0_*blf1_) !=(ls0_*ls1_))
+    return TEMPLATE_LOCAL_FETCH_PRODUCT_MUST_MATCH_LOCAL_SIZE_PRODUCT;
   {
     unsigned int bound1 = (B_trans_=='T')?kL_:nL_;
     unsigned int bound0 = (B_trans_=='T')?nL_:kL_;
 
-    if (alf1_>0 && (bound1 % alf1_)> 0)
+    if (blf1_>0 && (bound1 % blf1_)> 0)
       return B_trans_=='T'?TEMPLATE_LOCAL_FETCH_1_MUST_BE_KL_MULTIPLE:TEMPLATE_LOCAL_FETCH_1_MUST_BE_ML_MULTIPLE;
 
-    if (alf0_>0 && (bound0 % (alf0_*vwidth_)) > 0)
+    if (blf0_>0 && (bound0 % (blf0_*vwidth_)) > 0)
       return B_trans_=='T'?TEMPLATE_LOCAL_FETCH_1_MUST_BE_KL_MULTIPLE:TEMPLATE_LOCAL_FETCH_1_MUST_BE_ML_MULTIPLE;
 
   }
@@ -261,13 +262,14 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   stream << "$LOCAL " << sdtype << " lA[" << llda*lnda << "];" << std::endl;
   stream << "$LOCAL " << sdtype << " lB[" << lldb*lndb << "];" << std::endl;
   unsigned int npA = mL_/(A_trans_=='N'?alf0_*vwidth_:alf1_);
-  unsigned int npB = nL_/(B_trans_=='T'?alf0_*vwidth_:alf1_);
+  unsigned int npB = nL_/(B_trans_=='T'?blf0_*vwidth_:blf1_);
   stream << "$GLOBAL " << sdtype << "* Ai[" << npA << "];" << std::endl;
   stream << "$GLOBAL " << sdtype << "* Bi[" << npB << "];" << std::endl;
   stream << std::endl;
 
   stream << "//identifiers" << std::endl;
-  stream << "int2 idT;" << std::endl;
+  stream << "int2 idTA;" << std::endl;
+  stream << "int2 idTB;" << std::endl;
   stream << "int idt;" << std::endl;
   if(has_depth)
     stream << "int gidz, div, offz;" << std::endl;
@@ -292,31 +294,34 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   }
 
   stream << "idt = " << ls0_ << "*ids.w + ids.z;" << std::endl;
-  stream << "idT.y = idt/" << alf0_ << ";" << std::endl;
-  stream << "idT.x = idt - " << alf0_ << "*idT.y;" << std::endl;
+  stream << "idTA.y = idt/" << alf0_ << ";" << std::endl;
+  stream << "idTA.x = idt - " << alf0_ << "*idTA.y;" << std::endl;
+  stream << "idTB.y = idt/" << blf0_ << ";" << std::endl;
+  stream << "idTB.x = idt - " << blf0_ << "*idTB.y;" << std::endl;
   stream << std::endl;
 
   stream << "//Adjust pointers and bounds per work-item" << std::endl;
   stream << "ids.x *= " << mL_ << ";" << std::endl;
   stream << "ids.y *= " << nL_ << ";" << std::endl;
-  stream << "idT.x *= " << vwidth_ << ";" << std::endl;
+  stream << "idTA.x *= " << vwidth_ << ";" << std::endl;
+  stream << "idTB.x *= " << vwidth_ << ";" << std::endl;
 
   stream << "M -= ids.x;" << std::endl;
   if(A_trans_=='N')
-    stream << "M -= idT.x;" << std::endl;
+    stream << "M -= idTA.x;" << std::endl;
   else
-    stream << "M -= idT.y;" << std::endl;
+    stream << "M -= idTA.y;" << std::endl;
 
   stream << "N -= ids.y;" << std::endl;
   if(B_trans_=='T')
-    stream << "N -= idT.x;" << std::endl;
+    stream << "N -= idTB.x;" << std::endl;
   else
-    stream << "N -= idT.y;" << std::endl;
+    stream << "N -= idTB.y;" << std::endl;
 
   if (A_trans_=='N')
   {
     stream << "A += ids.x" << ASTRIDE1 << ";" << std::endl;
-    stream << "A += idT.y*lda;" << std::endl;
+    stream << "A += idTA.y*lda;" << std::endl;
     if(has_depth)
       stream << "A += offz*lda;" << std::endl;
 
@@ -324,7 +329,7 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   else
   {
     stream << "A += ids.x*lda;" << std::endl;
-    stream << "A += idT.x" << ASTRIDE1 << ";" << std::endl;
+    stream << "A += idTA.x" << ASTRIDE1 << ";" << std::endl;
     if(has_depth)
       stream << "A += offz;" << std::endl;
   }
@@ -332,14 +337,14 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   if(B_trans_=='T')
   {
     stream << "B += ids.y" << BSTRIDE1 << ";" << std::endl;
-    stream << "B += idT.y*ldb;" << std::endl;
+    stream << "B += idTB.y*ldb;" << std::endl;
     if(has_depth)
       stream << "B += offz*ldb;" << std::endl;
   }
   else
   {
     stream << "B += ids.y*ldb;" << std::endl;
-    stream << "B += idT.x" << BSTRIDE1 << ";" << std::endl;
+    stream << "B += idTB.x" << BSTRIDE1 << ";" << std::endl;
     if(has_depth)
       stream << "B += offz;" << std::endl;
   }
@@ -362,15 +367,15 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
 
   for(unsigned int i = 0 ; i < npA ; i++ )
     if (A_trans_=='N')
-      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < M", "(int)((idT.x + " + to_string(i*alf0_*vwidth_) + ")" + ASTRIDE1 + ")", "0") << ";" << std::endl;
+      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < M", "(int)((idTA.x + " + to_string(i*alf0_*vwidth_) + ")" + ASTRIDE1 + ")", "0") << ";" << std::endl;
     else
-      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < M", "(int)((idT.y + " + to_string(i*alf1_) + ")*lda)", "0") << ";" << std::endl;
+      stream << "Ai[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < M", "(int)((idTA.y + " + to_string(i*alf1_) + ")*lda)", "0") << ";" << std::endl;
 
   for(unsigned int i = 0 ; i < npB ; i++ )
     if (B_trans_=='T')
-      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < N", "(int)((idT.x + " + to_string(i*alf0_*vwidth_) + ")" + BSTRIDE1 + ")", "0") << ";" << std::endl;
+      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < N", "(int)((idTB.x + " + to_string(i*alf0_*vwidth_) + ")" + BSTRIDE1 + ")", "0") << ";" << std::endl;
     else
-      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < N", "(int)((idT.y + " + to_string(i*alf1_) + ")*ldb)", "0") << ";" << std::endl;
+      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < N", "(int)((idTB.y + " + to_string(i*alf1_) + ")*ldb)", "0") << ";" << std::endl;
 
   stream << std::endl;
   stream << "//Outer loop" << std::endl;
@@ -382,8 +387,8 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   auto fetch_to_lds = [&](bool last_iteration)
   {
     stream << "$LOCAL_BARRIER;" << std::endl;
-    stream << "$LOCAL_PTR " << sdtype << "* ldsA = lA + idT.y*" << llda << " + idT.x;" << std::endl;
-    stream << "$LOCAL_PTR " << sdtype << "* ldsB = lB + idT.y*" << lldb << " + idT.x;" << std::endl;
+    stream << "$LOCAL_PTR " << sdtype << "* ldsA = lA + idTA.y*" << llda << " + idTA.x;" << std::endl;
+    stream << "$LOCAL_PTR " << sdtype << "* ldsB = lB + idTB.y*" << lldb << " + idTB.x;" << std::endl;
 
     stream << "//Fetch A to local memory" << std::endl;
     if (A_trans_=='N')
@@ -395,7 +400,7 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
-              stream << "ldsA[" << k*llda + m + s << "] = (condy" << k << " && " << s << "< M)? Ai[" << mm << "][" << k << "*lda + " << s << "] : 0;" << std::endl;
+              stream << "ldsA[" << k*llda + m + s << "] = (Acondy" << k << " && " << s << "< M)? Ai[" << mm << "][" << k << "*lda + " << s << "] : 0;" << std::endl;
           else
             stream << VSTORE_LDSA(VLOAD_MISALIGNED("0" ,"&Ai[" + mm +"][" + kk + "*lda]"), "0", "ldsA + " + to_string(k*llda+m)) << ";" << std::endl;
         }
@@ -409,7 +414,7 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
-              stream << "ldsA[" << m*llda + k + s << "] = condx" << k + s << "? Ai[" << mm << "][" << k + s << ASTRIDE1 << "] : 0;" << std::endl;
+              stream << "ldsA[" << m*llda + k + s << "] = Acondx" << k + s << "? Ai[" << mm << "][" << k + s << ASTRIDE1 << "] : 0;" << std::endl;
 
           else
             stream << VSTORE_LDSA(VLOAD_MISALIGNED("0", "&Ai[" + mm + "][" + kk + ASTRIDE1 + "]"), "0", "ldsA + " + to_string(m*llda+k)) << ";" << std::endl;
@@ -419,28 +424,28 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
     stream << "//Fetch B to local memory" << std::endl;
     if (B_trans_=='T')
     {
-      for(unsigned int k = 0; k < kL_; k += alf1_)
-        for(unsigned int n = 0; n < nL_; n += alf0_*vwidth_)
+      for(unsigned int k = 0; k < kL_; k += blf1_)
+        for(unsigned int n = 0; n < nL_; n += blf0_*vwidth_)
         {
-          std::string nn = to_string(n/(vwidth_*alf0_));
+          std::string nn = to_string(n/(vwidth_*blf0_));
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
-              stream << "ldsB[" << k*lldb + n + s << "] = (condy" << k << " && " << s << "< N)? Bi[" <<  nn << "][" << kk << "*ldb +" << s << "] : 0;" << std::endl;
+              stream << "ldsB[" << k*lldb + n + s << "] = (Bcondy" << k << " && " << s << "< N)? Bi[" <<  nn << "][" << kk << "*ldb +" << s << "] : 0;" << std::endl;
           else
             stream << VSTORE_LDSB(VLOAD_MISALIGNED("0" ,"&Bi[" + nn +"][" + kk + "*ldb]"), "0", "ldsB + " + to_string(k*lldb+n)) << ";" << std::endl;
         }
     }
     else
     {
-      for(unsigned int k = 0; k < kL_; k += alf0_*vwidth_)
-        for(unsigned int n = 0; n < nL_; n += alf1_)
+      for(unsigned int k = 0; k < kL_; k += blf0_*vwidth_)
+        for(unsigned int n = 0; n < nL_; n += blf1_)
         {
-          std::string nn = to_string(n/alf1_);
+          std::string nn = to_string(n/blf1_);
           std::string kk = to_string(k);
           if(last_iteration)
             for(unsigned int s = 0 ; s < vwidth_ ; ++s)
-              stream << "ldsB[" << n*lldb + k + s << "] = condx" << k + s << "? Bi[" << nn << "][" << k + s << BSTRIDE1 << "] : 0;" << std::endl;
+              stream << "ldsB[" << n*lldb + k + s << "] = Bcondx" << k + s << "? Bi[" << nn << "][" << k + s << BSTRIDE1 << "] : 0;" << std::endl;
 
           else
             stream << VSTORE_LDSB(VLOAD_MISALIGNED("0", "&Bi[" + nn + "][" + kk + BSTRIDE1 + "]"), "0", "ldsB + " + to_string(n*lldb+k)) << ";" << std::endl;
@@ -550,33 +555,43 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
   stream << "}" << std::endl;
 
 
-  if(A_trans_=='N' || B_trans_=='T')
-  {
-    stream << "int Ky = K - idT.y;" << std::endl;
+  if(A_trans_=='N'){
+    stream << "int AKy = K - idTA.y;" << std::endl;
     for(unsigned int k = 0; k < kL_; k += alf1_)
-      stream << "int condy" << k << " = " << k << " < Ky;" << std::endl;
+      stream << "int Acondy" << k << " = " << k << " < AKy;" << std::endl;
   }
-
-  if(A_trans_=='T' || B_trans_=='N')
-  {
-    stream << "int Kx = K - idT.x;" << std::endl;
+  else{
+    stream << "int AKx = K - idTA.x;" << std::endl;
     for(unsigned int k = 0 ; k < kL_ ; k += alf0_*vwidth_)
       for(unsigned int s = 0 ; s < vwidth_ ; ++s)
-        stream << "int condx" << k + s << " = " << k + s << " < Kx;" << std::endl;
+        stream << "int Acondx" << k + s << " = " << k + s << " < AKx;" << std::endl;
   }
+
+  if(B_trans_=='T'){
+    stream << "int BKy = K - idTB.y;" << std::endl;
+    for(unsigned int k = 0; k < kL_; k += blf1_)
+      stream << "int Bcondy" << k << " = " << k << " < BKy;" << std::endl;
+  }
+  else{
+    stream << "int BKx = K - idTB.x;" << std::endl;
+    for(unsigned int k = 0 ; k < kL_ ; k += blf0_*vwidth_)
+      for(unsigned int s = 0 ; s < vwidth_ ; ++s)
+        stream << "int Bcondx" << k + s << " = " << k + s << " < BKx;" << std::endl;
+  }
+
   fetch_to_lds(true);
 
   stream << "//Write back C" << std::endl;
   stream << "M += ids.x;" << std::endl;
   if(A_trans_=='N')
-    stream << "M += idT.x;" << std::endl;
+    stream << "M += idTA.x;" << std::endl;
   else
-    stream << "M += idT.y;" << std::endl;
+    stream << "M += idTA.y;" << std::endl;
 
   if(B_trans_=='T')
-    stream << "N += idT.x;" << std::endl;
+    stream << "N += idTB.x;" << std::endl;
   else
-    stream << "N += idT.y;" << std::endl;
+    stream << "N += idTB.y;" << std::endl;
   stream << "N += ids.y;" << std::endl;
 
   stream << "C += ids.x" << CSTRIDE1 << ";" << std::endl;
@@ -782,38 +797,22 @@ void gemm::enqueue(driver::CommandQueue & queue, driver::Program const & program
 }
 
 //
-gemm_nn::gemm_nn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
-  gemm_nn(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
-{}
-
 gemm_nn::gemm_nn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
   gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'N', 'N')
 {}
 
 
 //
-gemm_tn::gemm_tn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
-  gemm_tn(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
-{ }
-
 gemm_tn::gemm_tn(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
   gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'T', 'N')
 { }
 
 //
-gemm_nt::gemm_nt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
-  gemm_nt(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
-{ }
-
 gemm_nt::gemm_nt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
   gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'N', 'T')
 { }
 
 //
-gemm_tt::gemm_tt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t lf0, int_t lf1) :
-  gemm_tt(vwidth, ls0, KL, ls1, D, ms, ks, ns, lf0, lf1, lf0, lf1)
-{ }
-
 gemm_tt::gemm_tt(unsigned int vwidth, int_t ls0, int_t KL, int_t ls1, int_t D, int_t ms, int_t ks, int_t ns, int_t alf0, int_t alf1, int_t blf0, int_t blf1) :
   gemm(vwidth, ls0, KL, ls1, D, ms, ks, ns, alf0, alf1, blf0, blf1, 'T', 'T')
 { }
