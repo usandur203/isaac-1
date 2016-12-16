@@ -139,7 +139,9 @@ void profiles::value_type::execute(runtime::execution_handler const & expr)
       try{
         double total_time = 0;
         std::vector<double> ctimes;
-        while(total_time < 1e-2){
+        templates_[i]->enqueue(queue_, program, tools::to_string(i), runtime::execution_handler(tree));
+        queue_.synchronize();
+        while(total_time < 1e-3){
           tmr.start();
           templates_[i]->enqueue(queue_, program, tools::to_string(i), runtime::execution_handler(tree));
           queue_.synchronize();
@@ -181,28 +183,36 @@ std::shared_ptr<templates::base> profiles::create(std::string const & op, std::s
     throw;
 }
 
-std::shared_ptr<templates::base> profiles::create(std::string const & template_name, std::vector<int> const & x)
+std::shared_ptr<templates::base> profiles::create(std::string const & name, std::vector<int> const & x)
 {
-  if(template_name=="elementwise_1d")
+  if(name=="elementwise_1d")
     return std::shared_ptr<templates::base>(new templates::elementwise_1d(x[0], x[1], x[2]));
-  else if(template_name=="reduce_1d")
+  else if(name=="reduce_1d")
     return std::shared_ptr<templates::base>(new templates::reduce_1d(x[0], x[1], x[2]));
-  else if(template_name=="elementwise_2d")
+  else if(name=="elementwise_2d")
     return std::shared_ptr<templates::base>(new templates::elementwise_2d(x[0], x[1], x[2], x[3], x[4]));
-  else if(template_name.find("reduce_2d_rows")!=std::string::npos)
+  else if(name=="reduce_2d_rows")
     return std::shared_ptr<templates::base>(new templates::reduce_2d_rows(x[0], x[1], x[2], x[3], x[4]));
-  else if(template_name.find("reduce_2d_cols")!=std::string::npos)
+  else if(name=="reduce_2d_cols")
     return std::shared_ptr<templates::base>(new templates::reduce_2d_cols(x[0], x[1], x[2], x[3], x[4]));
-  else if(template_name.find("gemm_nn")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_nn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
-  else if(template_name.find("gemm_tn")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_tn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
-  else if(template_name.find("gemm_nt")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_nt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
-  else if(template_name.find("gemm_tt")!=std::string::npos)
-    return std::shared_ptr<templates::base>(new templates::gemm_tt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[8], x[9]));
+  else if(name=="gemm_nn" || name=="gemm_tn" || name=="gemm_nt" || name=="gemm_tt"){
+    int alf0 = x[8], alf1 = x[9];
+    int blf0 = alf0, blf1 = alf1;
+    if(x.size()>10){
+      blf0 = x[10];
+      blf1 = x[11];
+    }
+    if(name=="gemm_nn")
+      return std::shared_ptr<templates::base>(new templates::gemm_nn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], alf0, alf1, blf0, blf1));
+    else if(name=="gemm_tn")
+      return std::shared_ptr<templates::base>(new templates::gemm_tn(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], alf0, alf1, blf0, blf1));
+    else if(name=="gemm_nt")
+      return std::shared_ptr<templates::base>(new templates::gemm_nt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], alf0, alf1, blf0, blf1));
+    else
+      return std::shared_ptr<templates::base>(new templates::gemm_tt(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], alf0, alf1, blf0, blf1));
+  }
   else
-    throw std::invalid_argument("Invalid expression: " + template_name);
+    throw std::invalid_argument("Invalid expression: " + name);
 }
 
 void profiles::import(std::string const & str, driver::CommandQueue const & queue)
