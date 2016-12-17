@@ -373,9 +373,9 @@ std::string gemm::generate_impl(std::string const & suffix, expression_tree cons
 
   for(unsigned int i = 0 ; i < npB ; i++ )
     if (B_trans_=='T')
-      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf0_*vwidth_) + " < N", "(int)((idTB.x + " + to_string(i*alf0_*vwidth_) + ")" + BSTRIDE1 + ")", "0") << ";" << std::endl;
+      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*blf0_*vwidth_) + " < N", "(int)((idTB.x + " + to_string(i*blf0_*vwidth_) + ")" + BSTRIDE1 + ")", "0") << ";" << std::endl;
     else
-      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*alf1_) + " < N", "(int)((idTB.y + " + to_string(i*alf1_) + ")*ldb)", "0") << ";" << std::endl;
+      stream << "Bi[" << i << "] += " << Select(backend, to_string(i*blf1_) + " < N", "(int)((idTB.y + " + to_string(i*blf1_) + ")*ldb)", "0") << ";" << std::endl;
 
   stream << std::endl;
   stream << "//Outer loop" << std::endl;
