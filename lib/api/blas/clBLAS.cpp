@@ -167,7 +167,7 @@ extern "C"
     {\
         if(order==clblasRowMajor){\
             std::swap(M, N);\
-            transA = (transA==clblasTrans)?clblasNoTrans:clblasTrans;\
+            transA = (transA==clblasTrans || transA==clblasConjTrans)?clblasNoTrans:clblasTrans;\
         }\
         sc::array A((sc::int_t)M, (sc::int_t)N, TYPE_ISAAC, sc::driver::Buffer(mA, false), (sc::int_t)offA, (sc::int_t)lda);\
         \
@@ -177,7 +177,7 @@ extern "C"
         sc::array y(sy, TYPE_ISAAC, sc::driver::Buffer(my, false), (sc::int_t)offy, incy);\
         \
         sc::driver::Context const & context = A.context();\
-        if(transA==clblasTrans)\
+        if(transA==clblasTrans || transA==clblasConjTrans)\
             execute(sc::assign(y, alpha*dot(A.T, x) + beta*y), context, numCommandQueues, commandQueues, numEventsInWaitList, eventWaitList, events);\
         else\
             execute(sc::assign(y, alpha*dot(A, x) + beta*y), context, numCommandQueues, commandQueues, numEventsInWaitList, eventWaitList, events);\

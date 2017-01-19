@@ -75,7 +75,14 @@ Device::Architecture Device::architecture() const
     {
         case Vendor::INTEL:
         {
-            return Architecture::BROADWELL;
+#ifdef INTEL_ARCH
+            if(std::string(INTEL_ARCH) == std::string("BROADWELL"))
+                return Architecture::BROADWELL;
+            else if(std::string(INTEL_ARCH) == std::string("SKYLAKE"))
+                return Architecture::SKYLAKE;
+            else
+#endif
+                return Architecture::BROADWELL;
         }
         case Vendor::NVIDIA:
         {
