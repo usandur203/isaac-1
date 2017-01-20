@@ -23,6 +23,22 @@ Link against libisaac.so instead of libcublas.so or libclblas.so, and you're goo
 
 The C++ and Python API does some kernel fusion, but is not entirely stable. It works well to compose element-wise operations, though.
 
+#### Installation on Intel Platforms
+
+As OpenCL driver doesn't provide detail generation informations, we are using build option to determine the preferred platform.
+Currently, we support two platforms "SKYLAKE" or "BROADWELL", you need to specify this option at build time as below:
+
+For Skylake:
+
+```
+cmake -DINTEL_ARCH="SKYLAKE" && make -j4
+```
+
+For Broadwell:
+
+```
+cmake -DINTEL_ARCH="BROADWELL" && make -j4
+```
 
 ### Benchmark
 
